@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'models/invoice_data.dart' as model;
 
 class NewInvoiceScreen extends StatefulWidget {
+  const NewInvoiceScreen({super.key});
+
   @override
   State<NewInvoiceScreen> createState() => _NewInvoiceScreenState();
 }
@@ -23,7 +25,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
   double _discount = 0.0;
   double _shipping = 0.0;
   double _advancePaid = 0.0;
-  double _taxRate = 0.15;
+  final double _taxRate = 0.15;
   int _invoiceNumber = 1;
 
   DateTime _createdDate = DateTime.now();
@@ -31,66 +33,69 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('New Invoice'),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+    return SafeArea(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('New Invoice'),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: ListView(
+            children: [
+              _buildSection(context, 'Templates', template, Icons.description, 
+                onTap: () => _showOptionsDialog('Select Template', ['Default', 'Professional', 'Simple'], 
+                  (value) => setState(() => template = value))),
+              _buildSection(context, 'Language', language, Icons.language,
+                onTap: () => _showOptionsDialog('Select Language', ['English', 'Bengali'], 
+                  (value) => setState(() => language = value))),
+              _buildInvoiceInfo(),
+              _buildSection(context, 'Business Info', businessInfo.isEmpty ? 'Add Your Business Details' : businessInfo, 
+                Icons.business, onTap: () => _showInputDialog('Business Info', businessInfo, 
+                  (value) => setState(() => businessInfo = value))),
+              _buildSection(context, 'Bill To', clientName.isEmpty ? 'Add Client' : clientName, Icons.person,
+                onTap: () => _showInputDialog('Client Name', clientName, 
+                  (value) => setState(() => clientName = value))),
+              _buildItemsSection(),
+              _buildTotals(),
+              _buildSection(context, 'Currency', 'BDT ৳', Icons.attach_money),
+              _buildSection(context, 'Signature', '', Icons.edit),
+              _buildSection(context, 'Terms & Conditions', terms.isEmpty ? 'Add Terms & Conditions' : terms, 
+                Icons.assignment, onTap: () => _showInputDialog('Terms & Conditions', terms, 
+                  (value) => setState(() => terms = value))),
+              _buildSection(context, 'Payment Method', paymentMethod.isEmpty ? 'Add Payment Method' : paymentMethod, 
+                Icons.payment, onTap: () => _showOptionsDialog('Payment Method', 
+                  ['Cash', 'Bank Transfer', 'Credit Card'], (value) => setState(() => paymentMethod = value))),
+              _buildSection(context, 'Mark As', status, Icons.label,
+                onTap: () => _showOptionsDialog('Status', ['Unpaid', 'Paid', 'Partially Paid'], 
+                  (value) => setState(() => status = value))),
+              _buildSection(context, 'Attachments', '', Icons.attach_file),
+              SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _previewInvoice(),
+                      child: Text('Preview'),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _saveInvoice,
+                      child: Text('Save'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
-            _buildSection(context, 'Templates', template, Icons.description, 
-              onTap: () => _showOptionsDialog('Select Template', ['Default', 'Professional', 'Simple'], 
-                (value) => setState(() => template = value))),
-            _buildSection(context, 'Language', language, Icons.language,
-              onTap: () => _showOptionsDialog('Select Language', ['English', 'Bengali'], 
-                (value) => setState(() => language = value))),
-            _buildInvoiceInfo(),
-            _buildSection(context, 'Business Info', businessInfo.isEmpty ? 'Add Your Business Details' : businessInfo, 
-              Icons.business, onTap: () => _showInputDialog('Business Info', businessInfo, 
-                (value) => setState(() => businessInfo = value))),
-            _buildSection(context, 'Bill To', clientName.isEmpty ? 'Add Client' : clientName, Icons.person,
-              onTap: () => _showInputDialog('Client Name', clientName, 
-                (value) => setState(() => clientName = value))),
-            _buildItemsSection(),
-            _buildTotals(),
-            _buildSection(context, 'Currency', 'BDT ৳', Icons.attach_money),
-            _buildSection(context, 'Signature', '', Icons.edit),
-            _buildSection(context, 'Terms & Conditions', terms.isEmpty ? 'Add Terms & Conditions' : terms, 
-              Icons.assignment, onTap: () => _showInputDialog('Terms & Conditions', terms, 
-                (value) => setState(() => terms = value))),
-            _buildSection(context, 'Payment Method', paymentMethod.isEmpty ? 'Add Payment Method' : paymentMethod, 
-              Icons.payment, onTap: () => _showOptionsDialog('Payment Method', 
-                ['Cash', 'Bank Transfer', 'Credit Card'], (value) => setState(() => paymentMethod = value))),
-            _buildSection(context, 'Mark As', status, Icons.label,
-              onTap: () => _showOptionsDialog('Status', ['Unpaid', 'Paid', 'Partially Paid'], 
-                (value) => setState(() => status = value))),
-            _buildSection(context, 'Attachments', '', Icons.attach_file),
-            SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _previewInvoice(),
-                    child: Text('Preview'),
-                  ),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _saveInvoice,
-                    child: Text('Save'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+      
     );
   }
 
@@ -254,7 +259,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

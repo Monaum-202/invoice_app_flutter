@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'models/invoice_data.dart' as model;
 import 'new_invoice_screen.dart';
 import 'invoice_manager.dart';
+import 'bottomNav.dart';
 
 void main() {
   runApp(
@@ -29,7 +30,7 @@ class InvoiceApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      home: const InvoiceManager(),
+      home: HomeScreen(),
       routes: {
         '/newInvoice': (context) => NewInvoiceScreen(),
       },
