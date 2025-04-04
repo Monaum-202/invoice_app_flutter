@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'invoice_manager.dart';
+import 'product_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -13,7 +14,7 @@ class _HomeScreenState extends State<HomeScreen> {
     InvoiceManager(),
     Center(child: Text("Estimates Screen")),
     Center(child: Text("Clients Screen")),
-    Center(child: Text("Items Screen")),
+    ProductScreen(),
     Center(child: Text("More Options Screen")),
   ];
 
@@ -48,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.list),
-            label: "Items",
+            label: "Products",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.more_horiz),
