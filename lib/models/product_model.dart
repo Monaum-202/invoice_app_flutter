@@ -5,7 +5,7 @@ class Product {
   String? productCode;
   String? name;
   String? description;
-  double? unitPrice;
+  double? price;
   double? taxRate;
 
   Product({
@@ -13,7 +13,7 @@ class Product {
     this.productCode,
     this.name,
     this.description,
-    this.unitPrice,
+    this.price,
     this.taxRate,
   });
 
@@ -24,7 +24,7 @@ class Product {
       productCode: json['productCode']?.toString(),
       name: json['name']?.toString(),
       description: json['description']?.toString(),
-      unitPrice: json['unitPrice'] != null ? double.parse(json['unitPrice'].toString()) : null,
+      price: json['price'] != null ? double.parse(json['price'].toString()) : null,
       taxRate: json['taxRate'] != null ? double.parse(json['taxRate'].toString()) : null,
     );
   }
@@ -36,7 +36,7 @@ class Product {
       "productCode": productCode,
       "name": name,
       "description": description,
-      "unitPrice": unitPrice,
+      "price": price,
       "taxRate": taxRate,
     };
   }

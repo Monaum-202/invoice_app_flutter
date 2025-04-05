@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'models/invoice_data.dart' as model;
 import 'new_invoice_screen.dart';
-import 'invoice_manager.dart';
 import 'bottomNav.dart';
 
 void main() {

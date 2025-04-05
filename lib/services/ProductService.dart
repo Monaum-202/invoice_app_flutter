@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import '../models/product_model.dart';
 
 class ProductService {
-  static const String baseUrl = "http://localhost:9090/api/products"; 
+  static const String baseUrl = "http://192.168.20.133:9090/api/products"; 
 
   // GET: Fetch all products
   Future<List<Product>> getAllProducts() async {
@@ -42,8 +42,31 @@ class ProductService {
     }
   }
 
-  // GET: Fetch product by ID
-  Future<Product> getProductById(int id) async {
+
+
+Future<List<Product>> getAll() async {
+    final Uri url = Uri.parse(baseUrl);  // Adjust the endpoint if needed
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      // If the server returns a 200 OK response, parse the JSON.
+      final Map<String, dynamic> data = json.decode(response.body);
+
+      // Check if 'content' is available in the response, then map it to a list of Product objects.
+      List<Product> products = (data['content'] as List)
+          .map((productJson) => Product.fromJson(productJson))
+          .toList();
+
+      return products;
+    } else {
+      // If the server did not return a 200 OK response, throw an exception.
+      throw Exception('Failed to load products');
+    }
+  }
+
+
+
+ Future<Product> getProductById(int id) async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/$id'));
 
@@ -100,7 +123,9 @@ class ProductService {
     try {
       final response = await http.delete(Uri.parse('$baseUrl/$id'));
 
-      if (response.statusCode != 204) {
+      if (response.statusCode == 204) {
+        return;  // Successfully deleted
+      } else {
         throw Exception("Failed to delete product");
       }
     } catch (e) {
