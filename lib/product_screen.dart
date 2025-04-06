@@ -4,6 +4,8 @@ import 'package:invo/services/ProductService.dart';
 import 'models/product_model.dart';
 
 class ProductListPage extends StatefulWidget {
+  const ProductListPage({super.key});
+
   @override
   _ProductListPageState createState() => _ProductListPageState();
 }
@@ -15,7 +17,7 @@ class _ProductListPageState extends State<ProductListPage> {
   @override
   void initState() {
     super.initState();
-    products = _productService.getAll();  // Fetch products when the page loads
+    products = _productService.getAll(); // Fetch products when the page loads
   }
 
   // Handle product deletion
@@ -23,11 +25,16 @@ class _ProductListPageState extends State<ProductListPage> {
     try {
       await _productService.deleteProduct(id);
       setState(() {
-        products = _productService.getAll(); // Refresh the product list after deletion
+        products =
+            _productService.getAll(); // Refresh the product list after deletion
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Product deleted successfully')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Product deleted successfully')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete product')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to delete product')));
     }
   }
 
@@ -43,7 +50,8 @@ class _ProductListPageState extends State<ProductListPage> {
 
     if (updatedProduct != null) {
       setState(() {
-        products = _productService.getAll(); // Refresh product list after editing
+        products =
+            _productService.getAll(); // Refresh product list after editing
       });
     }
   }
@@ -60,7 +68,8 @@ class _ProductListPageState extends State<ProductListPage> {
 
     if (newProduct != null) {
       setState(() {
-        products = _productService.getAll(); // Refresh product list after adding
+        products =
+            _productService.getAll(); // Refresh product list after adding
       });
     }
   }
@@ -104,7 +113,10 @@ class _ProductListPageState extends State<ProductListPage> {
                         SizedBox(height: 4),
                         Text(
                           'Price: ৳${(product.price ?? 0).toStringAsFixed(2)} | Tax: ${(product.taxRate ?? 0).toStringAsFixed(1)}%',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -134,10 +146,10 @@ class _ProductListPageState extends State<ProductListPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addProduct,
-        child: Icon(Icons.add),
         tooltip: 'Add New Product',
         elevation: 10,
         backgroundColor: Colors.blue,
+        child: Icon(Icons.add),
       ),
     );
   }

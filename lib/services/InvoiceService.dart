@@ -2,13 +2,13 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/product_model.dart';
+import 'package:invo/models/invoice_model.dart';
 
-class ProductService {
-  static const String baseUrl = "http://localhost:9090/api/products"; 
+class InvoiceService {
+  static const String baseUrl = "http://localhost:9090/api/invoices"; 
 
   // GET: Fetch all products
-  Future<List<Product>> getAllProducts() async {
+  Future<List<Invoice>> getAllProducts() async {
     try {
       final response = await http.get(Uri.parse(baseUrl));
 
@@ -19,23 +19,23 @@ class ProductService {
         if (data is Map) {
           if (data.containsKey('data') && data['data'] is List) {
             return (data['data'] as List)
-                .map((json) => Product.fromJson(json as Map<String, dynamic>))
+                .map((json) => Invoice.fromJson(json as Map<String, dynamic>))
                 .toList();
           }
           // If we get a single product, wrap it in a list
-          return [Product.fromJson(Map<String, dynamic>.from(data))];
+          return [Invoice.fromJson(Map<String, dynamic>.from(data))];
         }
         
         // If the response is directly an array
         if (data is List) {
           return data
-              .map((json) => Product.fromJson(json as Map<String, dynamic>))
+              .map((json) => Invoice.fromJson(json as Map<String, dynamic>))
               .toList();
         }
         
         throw Exception("Invalid response format");
       } else {
-        throw Exception("Failed to load products: ${response.statusCode}");
+        throw Exception("Failed to load Invoices: ${response.statusCode}");
       }
     } catch (e) {
       throw Exception("Error: $e");
@@ -44,7 +44,7 @@ class ProductService {
 
 
 
-Future<List<Product>> getAll() async {
+Future<List<Invoice>> getAll() async {
     final Uri url = Uri.parse(baseUrl);  // Adjust the endpoint if needed
     final response = await http.get(url);
 
@@ -53,27 +53,27 @@ Future<List<Product>> getAll() async {
       final Map<String, dynamic> data = json.decode(response.body);
 
       // Check if 'content' is available in the response, then map it to a list of Product objects.
-      List<Product> products = (data['content'] as List)
-          .map((productJson) => Product.fromJson(productJson))
+      List<Invoice> invoice = (data['content'] as List)
+          .map((productJson) => Invoice.fromJson(productJson))
           .toList();
 
-      return products;
+      return invoice;
     } else {
       // If the server did not return a 200 OK response, throw an exception.
-      throw Exception('Failed to load products');
+      throw Exception('Failed to load Invoices');
     }
   }
 
 
 
- Future<Product> getProductById(int id) async {
+ Future<Invoice> getInvoiceById(int id) async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/$id'));
 
       if (response.statusCode == 200) {
-        return Product.fromJson(jsonDecode(response.body));
+        return Invoice.fromJson(jsonDecode(response.body));
       } else {
-        throw Exception("Product not found");
+        throw Exception("Invoice not found");
       }
     } catch (e) {
       throw Exception("Error: $e");
@@ -81,18 +81,18 @@ Future<List<Product>> getAll() async {
   }
 
   // POST: Create a new product
-  Future<Product> createProduct(Product product) async {
+  Future<Invoice> createProduct(Invoice invoice) async {
     try {
       final response = await http.post(
         Uri.parse(baseUrl),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode(product.toJson()),
+        body: jsonEncode(invoice.toJson()),
       );
 
       if (response.statusCode == 201) {
-        return Product.fromJson(jsonDecode(response.body));
+        return Invoice.fromJson(jsonDecode(response.body));
       } else {
-        throw Exception("Failed to create product");
+        throw Exception("Failed to create Invoice");
       }
     } catch (e) {
       throw Exception("Error: $e");
@@ -100,16 +100,16 @@ Future<List<Product>> getAll() async {
   }
 
   // PUT: Update product
-  Future<Product> updateProduct(Product product) async {
+  Future<Invoice> updateProduct(Invoice invoice) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/${product.id}'),
+        Uri.parse('$baseUrl/${invoice.id}'),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode(product.toJson()),
+        body: jsonEncode(invoice.toJson()),
       );
 
       if (response.statusCode == 200) {
-        return Product.fromJson(jsonDecode(response.body));
+        return Invoice.fromJson(jsonDecode(response.body));
       } else {
         throw Exception("Failed to update product");
       }
@@ -119,14 +119,14 @@ Future<List<Product>> getAll() async {
   }
 
   // DELETE: Delete product
-  Future<void> deleteProduct(int id) async {
+  Future<void> deleteInvoice(int id) async {
     try {
       final response = await http.delete(Uri.parse('$baseUrl/$id'));
 
       if (response.statusCode == 204) {
         return;  // Successfully deleted
       } else {
-        throw Exception("Failed to delete product");
+        throw Exception("Failed to delete Invoice");
       }
     } catch (e) {
       throw Exception("Error: $e");
