@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:invo/services/InvoiceService.dart';
-import 'package:invo/invoice_edit.dart';
 import 'models/invoice_model.dart';
 
 class InvoiceListPage extends StatefulWidget {

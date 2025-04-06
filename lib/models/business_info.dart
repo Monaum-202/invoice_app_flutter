@@ -1,20 +1,20 @@
 class BusinessInfo {
   int? id;
-  String businessName;
-  String address;
-  String phone;
-  String email;
-  String taxId;
-  String website;
+  String? businessName;
+  String? address;
+  String? phone;
+  String? email;
+  String? taxId;
+  String? website;
 
   BusinessInfo({
     this.id,
-    required this.businessName,
-    required this.address,
-    required this.phone,
-    required this.email,
-    required this.taxId,
-    required this.website,
+     this.businessName,
+     this.address,
+    this.phone,
+    this.email,
+    this.taxId,
+   this.website,
   });
 
   factory BusinessInfo.fromJson(Map<String, dynamic> json) {

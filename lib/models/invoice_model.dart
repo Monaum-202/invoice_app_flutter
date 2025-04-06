@@ -6,7 +6,7 @@ class Invoice {
   int? id;
   String invoiceNumber;
   double subtotal;
-  double totalAmount;
+  // double totalAmount;
   double discountPersentage;
   double discountCash;
   String status;
@@ -21,7 +21,7 @@ class Invoice {
     this.id,
     required this.invoiceNumber,
     required this.subtotal,
-    required this.totalAmount,
+    // required this.totalAmount,
     required this.discountPersentage,
     required this.discountCash,
     required this.status,
@@ -38,7 +38,7 @@ class Invoice {
       id: json['id'],
       invoiceNumber: json['invoiceNumber'],
       subtotal: json['subtotal'],
-      totalAmount: json['totalAmount'],
+      // totalAmount: json['totalAmount'],
       discountPersentage: json['discountPersentage'],
       discountCash: json['discountCash'],
       status: json['status'],
@@ -46,7 +46,8 @@ class Invoice {
       dueDate: DateTime.parse(json['dueDate']),
       createdBy: json['createdBy'],
       client: Client.fromJson(json['client']),
-      items: (json['items'] as List).map((e) => InvoiceItem.fromJson(e)).toList(),
+      items:
+          (json['items'] as List).map((e) => InvoiceItem.fromJson(e)).toList(),
       businessInfo: BusinessInfo.fromJson(json['businessInfo']),
     );
   }
@@ -56,7 +57,7 @@ class Invoice {
       "id": id,
       "invoiceNumber": invoiceNumber,
       "subtotal": subtotal,
-      "totalAmount": totalAmount,
+      // "totalAmount": totalAmount,
       "discountPersentage": discountPersentage,
       "discountCash": discountCash,
       "status": status,
@@ -65,7 +66,12 @@ class Invoice {
       "createdBy": createdBy,
       "client": client.toJson(),
       "items": items.map((e) => e.toJson()).toList(),
-      "businessInfo": businessInfo.toJson()
+      "businessInfo": businessInfo.toJson(),
     };
+  }
+
+  @override
+  String toString() {
+    return 'Invoice{id: $id, invoiceNumber: $invoiceNumber, subtotal: $subtotal, discountPersentage: $discountPersentage, discountCash: $discountCash, status: $status, issueDate: $issueDate, dueDate: $dueDate, createdBy: $createdBy, client: $client, items: $items, businessInfo: $businessInfo}';
   }
 }
