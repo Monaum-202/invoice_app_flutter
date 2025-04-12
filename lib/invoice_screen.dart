@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:invo/new_invoice_screen.dart';
 import 'package:invo/services/InvoiceService.dart';
 import 'models/invoice_model.dart';
 
@@ -88,22 +88,18 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Client: ${invoice.client.name ?? 'N/A'}'),
+                      Text('Client: ${invoice.client?.name ?? 'N/A'}'),
                       Text('Subtotal: ৳${(invoice.subtotal ?? 0.0).toStringAsFixed(2)}'),
-Text('Discount: ৳${(invoice.discountCash ?? 0.0).toStringAsFixed(2)}'),
-Text('Discount %: ${(invoice.discountPersentage ?? 0.0).toStringAsFixed(1)}%'),
+                      Text('Discount: ৳${(invoice.discountCash ?? 0.0).toStringAsFixed(2)}'),
+                      Text('Discount %: ${(invoice.discountPersentage ?? 0.0).toStringAsFixed(1)}%'),
                       Text('Status: ${invoice.status ?? 'N/A'}'),
                     ],
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // IconButton(
-                      //   icon: Icon(Icons.edit, color: Colors.orange),
-                      //   onPressed: () => _editInvoice(invoice),
-                      // ),
                       IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
+                        icon: Icon(Icons.delete),
                         onPressed: () => _deleteInvoice(invoice.id!),
                       ),
                     ],
@@ -114,12 +110,21 @@ Text('Discount %: ${(invoice.discountPersentage ?? 0.0).toStringAsFixed(1)}%'),
           );
         },
       ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: _addInvoice,
-      //   child: Icon(Icons.add),
-      //   tooltip: 'Add New Invoice',
-      //   backgroundColor: Colors.blue,
-      // ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const NewInvoiceScreen()),
+          ).then((value) {
+            // Refresh the invoice list when returning from new invoice screen
+            setState(() {
+              invoices = _invoiceService.getAll();
+            });
+          });
+        },
+        child: const Icon(Icons.add),
+        backgroundColor: Theme.of(context).primaryColor,
+      ),
     );
   }
 }

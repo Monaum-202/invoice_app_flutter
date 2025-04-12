@@ -4,33 +4,33 @@ import 'package:invo/models/invoice_item.dart';
 
 class Invoice {
   int? id;
-  String invoiceNumber;
-  double subtotal;
+  String? invoiceNumber;
+  double? subtotal;
   // double totalAmount;
-  double discountPersentage;
-  double discountCash;
-  String status;
-  DateTime issueDate;
-  DateTime dueDate;
-  int createdBy;
-  Client client;
-  List<InvoiceItem> items;
-  BusinessInfo businessInfo;
+  double? discountPersentage;
+  double? discountCash;
+  String? status;
+  DateTime? issueDate;
+  DateTime? dueDate;
+  int? createdBy;
+  Client? client;
+  List<InvoiceItem>? items;
+  BusinessInfo? businessInfo;
 
   Invoice({
     this.id,
-    required this.invoiceNumber,
-    required this.subtotal,
+     this.invoiceNumber,
+     this.subtotal,
     // required this.totalAmount,
-    required this.discountPersentage,
-    required this.discountCash,
-    required this.status,
-    required this.issueDate,
-    required this.dueDate,
-    required this.createdBy,
-    required this.client,
-    required this.items,
-    required this.businessInfo,
+     this.discountPersentage,
+     this.discountCash,
+     this.status,
+    this.issueDate,
+    this.dueDate,
+    this.createdBy,
+    this.client,
+    this.items,
+    this.businessInfo,
   });
 
   factory Invoice.fromJson(Map<String, dynamic> json) {
@@ -61,12 +61,12 @@ class Invoice {
       "discountPersentage": discountPersentage,
       "discountCash": discountCash,
       "status": status,
-      "issueDate": issueDate.toIso8601String(),
-      "dueDate": dueDate.toIso8601String(),
+      "issueDate": issueDate?.toIso8601String(),
+      "dueDate": dueDate?.toIso8601String(),
       "createdBy": createdBy,
-      "client": client.toJson(),
-      "items": items.map((e) => e.toJson()).toList(),
-      "businessInfo": businessInfo.toJson(),
+      "client": client?.toJson(),
+      "items": items?.map((e) => e.toJson()).toList(),
+      "businessInfo": businessInfo?.toJson(),
     };
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:invo/invoice_screen.dart';
 import 'package:invo/new_invoice_screen.dart';
 import 'package:provider/provider.dart';
 import 'models/invoice_data.dart' as model;
@@ -31,7 +32,8 @@ class InvoiceApp extends StatelessWidget {
       ),
       home: HomeScreen(),
       routes: {
-        '/newInvoice': (context) => NewInvoiceScreen(),
+        // '/newInvoice': (context) => NewInvoiceScreen(),
+        '/newInvoice': (context) => InvoiceListPage(),  
       },
     );
   }
