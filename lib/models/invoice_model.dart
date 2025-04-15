@@ -6,7 +6,9 @@ class Invoice {
   int? id;
   String? invoiceNumber;
   double? subtotal;
-  // double totalAmount;
+  double? totalAmount;
+  double? paidAmount;
+  double? dueAmount;
   double? discountPersentage;
   double? discountCash;
   String? status;
@@ -19,12 +21,14 @@ class Invoice {
 
   Invoice({
     this.id,
-     this.invoiceNumber,
-     this.subtotal,
-    // required this.totalAmount,
-     this.discountPersentage,
-     this.discountCash,
-     this.status,
+    this.invoiceNumber,
+    this.subtotal,
+    this.totalAmount,
+    this.paidAmount,
+    this.dueAmount,
+    this.discountPersentage,
+    this.discountCash,
+    this.status,
     this.issueDate,
     this.dueDate,
     this.createdBy,
@@ -38,7 +42,9 @@ class Invoice {
       id: json['id'],
       invoiceNumber: json['invoiceNumber'],
       subtotal: json['subtotal'],
-      // totalAmount: json['totalAmount'],
+      totalAmount: json['totalAmount'],
+      paidAmount: json['paidAmount'],
+      dueAmount: json['dueAmount'],
       discountPersentage: json['discountPersentage'],
       discountCash: json['discountCash'],
       status: json['status'],
@@ -57,7 +63,9 @@ class Invoice {
       "id": id,
       "invoiceNumber": invoiceNumber,
       "subtotal": subtotal,
-      // "totalAmount": totalAmount,
+      "totalAmount": totalAmount,
+      "paidAmount": paidAmount,
+      "dueAmount": dueAmount,
       "discountPersentage": discountPersentage,
       "discountCash": discountCash,
       "status": status,
@@ -72,6 +80,6 @@ class Invoice {
 
   @override
   String toString() {
-    return 'Invoice{id: $id, invoiceNumber: $invoiceNumber, subtotal: $subtotal, discountPersentage: $discountPersentage, discountCash: $discountCash, status: $status, issueDate: $issueDate, dueDate: $dueDate, createdBy: $createdBy, client: $client, items: $items, businessInfo: $businessInfo}';
+    return 'Invoice{id: $id, invoiceNumber: $invoiceNumber, subtotal: $subtotal, totalAmount: $totalAmount, paidAmount: $paidAmount, dueAmount: $dueAmount, discountPersentage: $discountPersentage, discountCash: $discountCash, status: $status, issueDate: $issueDate, dueDate: $dueDate, createdBy: $createdBy, client: ${client?.toString()}, items: ${items?.toString()}, businessInfo: ${businessInfo?.toString()}}';
   }
 }

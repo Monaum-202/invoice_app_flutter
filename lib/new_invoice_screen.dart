@@ -43,9 +43,12 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
   final List<Map<String, dynamic>> items = [];
   final DateFormat _dateFormat = DateFormat('dd-MMM-yyyy');
 
-  double _discount = 0.0;
+  double _discountPercentage = 0.0;
+  double _discountAmount = 0.0;
   double _shipping = 0.0;
   double _advancePaid = 0.0;
+  double _paidAmount = 0.0;
+  
   final double _taxRate = 0.15;
   int _invoiceNumber = 1;
 
@@ -53,7 +56,16 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
   DateTime _dueDate = DateTime.now().add(Duration(days: 7));
 
   @override
+  void initState() {
+    super.initState();
+    print('=== Initial Client Info ===');
+    print(clientInfo);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    print('=== Build Client Info ===');
+    print(clientInfo);
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
@@ -179,10 +191,10 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
               'Invoice Info',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            trailing: Text(
-              'INV${_invoiceNumber.toString().padLeft(6, '0')}',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
+            // trailing: Text(
+            //   'INV${_invoiceNumber.toString().padLeft(6, '0')}',
+            //   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            // ),
           ),
           ListTile(
             title: Row(
@@ -412,30 +424,30 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  decoration: InputDecoration(labelText: 'Client Name'),
                   controller: TextEditingController(text: tempInfo['name']),
+                  decoration: InputDecoration(labelText: 'Client Name'),
                   onChanged: (value) => tempInfo['name'] = value,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: 'Email'),
                   controller: TextEditingController(text: tempInfo['email']),
+                  decoration: InputDecoration(labelText: 'Email'),
                   keyboardType: TextInputType.emailAddress,
                   onChanged: (value) => tempInfo['email'] = value,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: 'Phone'),
                   controller: TextEditingController(text: tempInfo['phone']),
+                  decoration: InputDecoration(labelText: 'Phone'),
                   keyboardType: TextInputType.phone,
                   onChanged: (value) => tempInfo['phone'] = value,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: 'NID (National ID)'),
                   controller: TextEditingController(text: tempInfo['nid']),
+                  decoration: InputDecoration(labelText: 'NID (National ID)'),
                   onChanged: (value) => tempInfo['nid'] = value,
                 ),
                 TextField(
-                  decoration: InputDecoration(labelText: 'Address'),
                   controller: TextEditingController(text: tempInfo['address']),
+                  decoration: InputDecoration(labelText: 'Address'),
                   onChanged: (value) => tempInfo['address'] = value,
                 ),
               ],
@@ -459,37 +471,154 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     );
   }
 
+  Widget _buildItemsSection() {
+    return Card(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            title: Text('Items', style: TextStyle(fontWeight: FontWeight.bold)),
+            trailing: ElevatedButton.icon(
+              onPressed: _addItem,
+              icon: Icon(Icons.add),
+              label: Text('Add Item'),
+            ),
+          ),
+          if (items.isEmpty)
+            ListTile(
+              title: Text(
+                'No items added',
+                style: TextStyle(color: Colors.grey),
+              ),
+              leading: Icon(Icons.shopping_cart, color: Colors.grey),
+            )
+          else
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: 300),
+              child: ListView(
+                shrinkWrap: true,
+                children: items.map((item) {
+                  final quantity = double.tryParse(item['unit'] ?? '0') ?? 0;
+                  final unitPrice = double.tryParse(item['price'] ?? '0') ?? 0;
+                  final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
+                  final itemTotal = quantity * unitPrice;
+                  final itemTax = itemTotal * tax / 100;
+                  
+                  return ListTile(
+                    title: Text(item['name'] ?? 'Item'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (item['description']?.isNotEmpty ?? false)
+                          Text(
+                            item['description'] ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        Text(
+                          '${quantity.toStringAsFixed(0)} × ৳${unitPrice.toStringAsFixed(2)}',
+                        ),
+                        if (tax > 0)
+                          Text(
+                            'Tax: ${tax.toStringAsFixed(1)}%',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                      ],
+                    ),
+                    trailing: Container(
+                      width: 120,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '৳${itemTotal.toStringAsFixed(2)}',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          if (tax > 0)
+                            Text(
+                              '+ ৳${itemTax.toStringAsFixed(2)}',
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          Text(
+                            'Total: ৳${(itemTotal + itemTax).toStringAsFixed(2)}',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   void _saveInvoice() async {
-    final subtotal = _calculateSubtotal();
+    final subtotal = _calculateSubtotal();  // This now includes item prices + tax
+    final discountPercentage = _discountPercentage;
+    final discountAmount = _discountPercentage > 0 
+        ? (subtotal * _discountPercentage / 100) 
+        : _discountAmount;
+    final itemTax = _calculateItemTax();
+    final shipping = _shipping;
+    
+    // Calculate total before payments
     final totalAmount = _calculateTotal(
       subtotal,
-      _discount,
-      _shipping,
-      _advancePaid,
-      _taxRate,
+      discountAmount,
+      shipping,
+      0,
+      0,
+      itemTax  // This won't be added again since it's in subtotal
     );
-    print('Subtotal: $subtotal');
+
+    final totalPaid = _advancePaid + _paidAmount;
+    final dueAmount = totalAmount - totalPaid;
+
+    print('=== Invoice Calculations ===');
+    print('Subtotal (including tax): $subtotal');
+    print('Item Level Tax (included in subtotal): $itemTax');
+    print('Discount Percentage: $discountPercentage%');
+    print('Discount Amount: $discountAmount');
+    print('Shipping: $shipping');
     print('Total Amount: $totalAmount');
+    print('Total Paid: $totalPaid');
+    print('Due Amount: $dueAmount');
+    print('========================');
+
     // Convert items to the correct format
     final List<Map<String, dynamic>> formattedItems =
         items.map((item) {
+          final quantity = double.tryParse(item['unit'] ?? '0') ?? 0;
+          final unitPrice = double.tryParse(item['price'] ?? '0') ?? 0;
+          final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
+          final itemTotal = quantity * unitPrice;
+          final taxAmount = itemTotal * tax / 100;
+          
           return {
             'itemName': item['name'] ?? '',
-            'quantity': double.tryParse(item['unit'] ?? '0') ?? 0,
-            'unitPrice': double.tryParse(item['price'] ?? '0') ?? 0,
-            'totalPrice': double.tryParse(item['amount'] ?? '0') ?? 0,
+            'quantity': quantity,
+            'unitPrice': unitPrice,
+            'totalPrice': itemTotal,
+            'tax': tax,
+            'taxAmount': taxAmount,
           };
         }).toList();
 
     final invoice = Invoice(
-      invoiceNumber: 'INV${_invoiceNumber.toString().padLeft(6, '0')}',
       issueDate: _createdDate,
-      subtotal: subtotal ?? 0.0,
-      discountPersentage: _discount > 0 ? (_discount / subtotal) * 100 : 0.0,
-      discountCash: _discount ?? 0.0,
-      // totalAmount: totalAmount ?? 0.0,
+      subtotal: subtotal,
+      totalAmount: totalAmount,
+      paidAmount: totalPaid,
+      dueAmount: dueAmount,
+      discountPersentage: discountPercentage,
+      discountCash: _discountAmount,
+      status: dueAmount <= 0 ? 'PAID' : status.toUpperCase(),
       dueDate: _dueDate,
-      status: status.toUpperCase(),
       client: Client(
         name: clientInfo['name'] ?? '',
         email: clientInfo['email'] ?? '',
@@ -497,18 +626,19 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
         nid: clientInfo['nid'] ?? '',
         address: clientInfo['address'] ?? '',
       ),
-      createdBy: 1, // You might want to get this from user authentication
-      items:
-          formattedItems
-              .map(
-                (item) => InvoiceItem(
-                  itemName: item['itemName'] ?? '',
-                  quantity: item['quantity'] ?? 0,
-                  unitPrice: item['unitPrice'] ?? 0,
-                  totalPrice: item['totalPrice'] ?? 0,
-                ),
-              )
-              .toList(),
+      createdBy: 1,
+      items: formattedItems
+          .map(
+            (item) => InvoiceItem(
+              itemName: item['itemName'] ?? '',
+              quantity: item['quantity'].toInt(),
+              unitPrice: item['unitPrice'],
+              totalPrice: item['totalPrice'],
+              tax: item['tax'],
+              taxAmount: item['taxAmount'],
+            ),
+          )
+          .toList(),
       businessInfo: BusinessInfo(
         businessName: businessInfo['businessName'] ?? '',
         address: businessInfo['address'] ?? '',
@@ -544,125 +674,136 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
 
   double _calculateSubtotal() {
     return items.fold(0.0, (sum, item) {
-      final amount = double.tryParse(item['amount'] ?? '0') ?? 0;
-      return sum + amount;
+      final quantity = double.tryParse(item['unit'] ?? '0') ?? 0;
+      final unitPrice = double.tryParse(item['price'] ?? '0') ?? 0;
+      final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
+      final itemTotal = quantity * unitPrice;
+      final itemTax = itemTotal * tax / 100;
+      return sum + itemTotal + itemTax;  // Include both price and tax in subtotal
     });
   }
 
   double _calculateItemTax() {
     return items.fold(0.0, (sum, item) {
-      final amount = double.tryParse(item['amount'] ?? '0') ?? 0;
-      final taxPercent = double.tryParse(item['tax'] ?? '0') ?? 0;
-      return sum + (amount * (taxPercent / 100));
+      final quantity = double.tryParse(item['unit'] ?? '0') ?? 0;
+      final unitPrice = double.tryParse(item['price'] ?? '0') ?? 0;
+      final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
+      final itemTotal = quantity * unitPrice;
+      return sum + (itemTotal * tax / 100);
     });
   }
 
   double _calculateTotal(
     double subtotal,
-    double discount,
+    double discountAmount,
     double shipping,
     double advancePaid,
-    double taxRate,
+    double paidAmount,
+    double itemLevelTax,
   ) {
-    final itemLevelTax = _calculateItemTax();
-    return subtotal + itemLevelTax - discount + shipping - advancePaid;
-  }
-
-  Widget _buildItemsSection() {
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            title: Text('Items', style: TextStyle(fontWeight: FontWeight.bold)),
-            trailing: ElevatedButton.icon(
-              onPressed: _addItem,
-              icon: Icon(Icons.add),
-              label: Text('Add Item'),
-            ),
-          ),
-          if (items.isEmpty)
-            ListTile(
-              title: Text(
-                'No items added',
-                style: TextStyle(color: Colors.grey),
-              ),
-              leading: Icon(Icons.shopping_cart, color: Colors.grey),
-            )
-          else
-            ...items.map((item) {
-              final quantity = double.tryParse(item['unit'] ?? '0') ?? 0;
-              final unitPrice = double.tryParse(item['price'] ?? '0') ?? 0;
-              final totalPrice = quantity * unitPrice;
-
-              return ListTile(
-                title: Text(item['name'] ?? 'Item'),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (item['description']?.isNotEmpty ?? false)
-                      Text(item['description'] ?? ''),
-                    Text(
-                      '${quantity.toStringAsFixed(0)} × ৳${unitPrice.toStringAsFixed(2)}',
-                    ),
-                  ],
-                ),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '৳${totalPrice.toStringAsFixed(2)}',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'Total',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              );
-            }),
-        ],
-      ),
-    );
+    // Since tax is now included in subtotal, don't add itemLevelTax again
+    return subtotal + shipping - discountAmount;
   }
 
   Widget _buildTotals() {
-    final subtotal = _calculateSubtotal();
+    final subtotal = _calculateSubtotal();  // This now includes item prices + tax
+    final discountPercentage = _discountPercentage;
+    final discountAmount = _discountPercentage > 0 
+        ? (subtotal * _discountPercentage / 100) 
+        : _discountAmount;
     final itemTax = _calculateItemTax();
-    final discount = _discount;
     final shipping = _shipping;
     final advancePaid = _advancePaid;
+    final paidAmount = _paidAmount;
     final total = _calculateTotal(
       subtotal,
-      discount,
+      discountAmount,
       shipping,
-      advancePaid,
-      _taxRate,
+      0,
+      0,
+      itemTax  // This won't be added again since it's in subtotal
     );
+
+    final totalPaid = advancePaid + paidAmount;
+    final dueAmount = total - totalPaid;
 
     return Card(
       child: Column(
         children: [
-          _buildTotalRow('Subtotal', '৳${subtotal.toStringAsFixed(2)}'),
+          _buildTotalRow('Subtotal (including tax)', '৳${subtotal.toStringAsFixed(2)}'),
           _buildTotalRow(
-            'Discount',
-            '৳${discount.toStringAsFixed(2)}',
+            'Discount Percentage',
+            '${_discountPercentage.toStringAsFixed(2)}%',
             isEditable: true,
+            onTap: () => _showInputDialog(
+              'Enter Discount Percentage',
+              _discountPercentage.toString(),
+              (value) {
+                setState(() {
+                  _discountPercentage = double.tryParse(value) ?? 0.0;
+                  _discountAmount = 0.0; // Reset amount when percentage is set
+                });
+              },
+            ),
           ),
-          _buildTotalRow('Tax', '৳${itemTax.toStringAsFixed(2)}'),
+          _buildTotalRow(
+            'Discount Amount',
+            '৳${discountAmount.toStringAsFixed(2)}',
+            isEditable: true,
+            onTap: () => _showInputDialog(
+              'Enter Discount Amount',
+              _discountAmount.toString(),
+              (value) {
+                setState(() {
+                  _discountAmount = double.tryParse(value) ?? 0.0;
+                  _discountPercentage = 0.0; // Reset percentage when amount is set
+                });
+              },
+            ),
+          ),
+          _buildTotalRow('Item Level Tax (included in subtotal)', '৳${itemTax.toStringAsFixed(2)}'),
           _buildTotalRow(
             'Shipping',
             '৳${shipping.toStringAsFixed(2)}',
             isEditable: true,
+            onTap: () => _showInputDialog(
+              'Enter Shipping Amount',
+              _shipping.toString(),
+              (value) => setState(() => _shipping = double.tryParse(value) ?? 0.0),
+            ),
           ),
+          Divider(),
+          _buildTotalRow('Total', '৳${total.toStringAsFixed(2)}', isBold: true),
           _buildTotalRow(
             'Advance Paid',
             '৳${advancePaid.toStringAsFixed(2)}',
             isEditable: true,
+            onTap: () => _showInputDialog(
+              'Enter Advance Paid Amount',
+              _advancePaid.toString(),
+              (value) => setState(() => _advancePaid = double.tryParse(value) ?? 0.0),
+            ),
           ),
-          Divider(),
-          _buildTotalRow('Total', '৳${total.toStringAsFixed(2)}', isBold: true),
+          _buildTotalRow(
+            'Paid Amount',
+            '৳${paidAmount.toStringAsFixed(2)}',
+            isEditable: true,
+            onTap: () => _showInputDialog(
+              'Enter Paid Amount',
+              _paidAmount.toString(),
+              (value) => setState(() => _paidAmount = double.tryParse(value) ?? 0.0),
+            ),
+          ),
+          _buildTotalRow(
+            'Total Paid', 
+            '৳${totalPaid.toStringAsFixed(2)}', 
+            isBold: true
+          ),
+          _buildTotalRow(
+            'Due Amount', 
+            '৳${dueAmount.toStringAsFixed(2)}', 
+            isBold: true
+          ),
         ],
       ),
     );
@@ -673,6 +814,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     String amount, {
     bool isBold = false,
     bool isEditable = false,
+    VoidCallback? onTap,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -696,43 +838,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
               if (isEditable)
                 IconButton(
                   icon: Icon(Icons.edit),
-                  onPressed: () {
-                    final controller = TextEditingController(
-                      text: amount.replaceAll('৳', ''),
-                    );
-                    showDialog(
-                      context: context,
-                      builder:
-                          (context) => AlertDialog(
-                            title: Text('Edit $title'),
-                            content: TextField(
-                              controller: controller,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(labelText: 'Amount'),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  final value = controller.text;
-                                  if (title == 'Discount') {
-                                    _handleDiscountEdit(value);
-                                  } else if (title == 'Shipping') {
-                                    _handleShippingEdit(value);
-                                  } else if (title == 'Advance Paid') {
-                                    _handleAdvancePaidEdit(value);
-                                  }
-                                  Navigator.pop(context);
-                                },
-                                child: Text('Save'),
-                              ),
-                            ],
-                          ),
-                    );
-                  },
+                  onPressed: onTap,
                 ),
             ],
           ),
@@ -881,16 +987,17 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     );
   }
 
-  void _previewInvoice() {
+  Future<void> _previewInvoice() {
     // TODO: Implement preview functionality
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('Preview feature coming soon!')));
+    return Future.value();
   }
 
   void _handleDiscountEdit(String value) {
     setState(() {
-      _discount = double.tryParse(value) ?? 0.0;
+      _discountPercentage = double.tryParse(value) ?? 0.0;
     });
   }
 

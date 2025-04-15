@@ -33,7 +33,7 @@ class InvoiceApp extends StatelessWidget {
       home: HomeScreen(),
       routes: {
         // '/newInvoice': (context) => NewInvoiceScreen(),
-        '/newInvoice': (context) => InvoiceListPage(),  
+        '/newInvoice': (context) => InvoiceListPage(),
       },
     );
   }

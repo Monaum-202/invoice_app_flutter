@@ -44,25 +44,26 @@ class ProductService {
 
 
 
-Future<List<Product>> getAll() async {
-    final Uri url = Uri.parse(baseUrl);  // Adjust the endpoint if needed
-    final response = await http.get(url);
+Future<Map<String, dynamic>> getAll({int page = 0, int size = 10}) async {
+  final Uri url = Uri.parse('$baseUrl?page=$page&size=$size');
+  final response = await http.get(url);
 
-    if (response.statusCode == 200) {
-      // If the server returns a 200 OK response, parse the JSON.
-      final Map<String, dynamic> data = json.decode(response.body);
+  if (response.statusCode == 200) {
+    final Map<String, dynamic> data = json.decode(response.body);
 
-      // Check if 'content' is available in the response, then map it to a list of Product objects.
-      List<Product> products = (data['content'] as List)
-          .map((productJson) => Product.fromJson(productJson))
-          .toList();
+    List<Product> products = (data['content'] as List)
+        .map((productJson) => Product.fromJson(productJson))
+        .toList();
 
-      return products;
-    } else {
-      // If the server did not return a 200 OK response, throw an exception.
-      throw Exception('Failed to load products');
-    }
+    return {
+      'products': products,
+      'totalPages': data['totalPages'],
+      'currentPage': data['number'],
+    };
+  } else {
+    throw Exception('Failed to load products');
   }
+}
 
 
 
