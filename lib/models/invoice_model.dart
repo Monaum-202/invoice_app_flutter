@@ -41,20 +41,23 @@ class Invoice {
     return Invoice(
       id: json['id'],
       invoiceNumber: json['invoiceNumber'],
-      subtotal: json['subtotal'],
-      totalAmount: json['totalAmount'],
-      paidAmount: json['paidAmount'],
-      dueAmount: json['dueAmount'],
-      discountPersentage: json['discountPersentage'],
-      discountCash: json['discountCash'],
+      subtotal: json['subtotal']?.toDouble(),
+      totalAmount: json['totalAmount']?.toDouble(),
+      paidAmount: json['paidAmount']?.toDouble(),
+      dueAmount: json['dueAmount']?.toDouble(),
+      discountPersentage: json['discountPersentage']?.toDouble(),
+      discountCash: json['discountCash']?.toDouble(),
       status: json['status'],
-      issueDate: DateTime.parse(json['issueDate']),
-      dueDate: DateTime.parse(json['dueDate']),
+      issueDate: json['issueDate'] != null ? DateTime.parse(json['issueDate']) : null,
+      dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate']) : null,
       createdBy: json['createdBy'],
-      client: Client.fromJson(json['client']),
-      items:
-          (json['items'] as List).map((e) => InvoiceItem.fromJson(e)).toList(),
-      businessInfo: BusinessInfo.fromJson(json['businessInfo']),
+      client: json['client'] != null ? Client.fromJson(json['client']) : null,
+      items: json['items'] != null 
+          ? (json['items'] as List).map((e) => InvoiceItem.fromJson(e)).toList()
+          : null,
+      businessInfo: json['businessInfo'] != null 
+          ? BusinessInfo.fromJson(json['businessInfo'])
+          : null,
     );
   }
 

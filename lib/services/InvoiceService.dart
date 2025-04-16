@@ -7,7 +7,8 @@ class InvoiceService {
 
   Future<Invoice> createInvoice(Invoice invoice) async {
     try {
-      // print("Creating invoice: $invoice");
+      print("Creating invoice with due date: ${invoice.dueDate}");
+      print("Request body: ${jsonEncode(invoice.toJson())}");
       final response = await http.post(
         Uri.parse(baseUrl),
         headers: {
@@ -16,7 +17,8 @@ class InvoiceService {
         },
         body: jsonEncode(invoice.toJson()),
       );
-      // print("Response status: ${response.statusCode}");
+      print("Response status: ${response.statusCode}");
+      print("Response body: ${response.body}");
       if (response.statusCode == 201 || response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         print("Response data: $responseData");
@@ -146,7 +148,6 @@ class InvoiceService {
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
 
-
       List<Invoice> invoices = (data['content'] as List)
           .map((invoiceJson) => Invoice.fromJson(invoiceJson))
           .toList();
@@ -174,7 +175,6 @@ class InvoiceService {
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
-
 
       List<Invoice> invoices = (data['content'] as List)
           .map((invoiceJson) => Invoice.fromJson(invoiceJson))

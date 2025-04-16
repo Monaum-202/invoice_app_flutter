@@ -53,7 +53,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
   int _invoiceNumber = 1;
 
   DateTime _createdDate = DateTime.now();
-  DateTime _dueDate = DateTime.now().add(Duration(days: 7));
+  DateTime? _dueDate;  // Changed to nullable and removed default value
 
   @override
   void initState() {
@@ -222,13 +222,13 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
             ),
             subtitle: Row(
               children: [
-                Text('Due: ${_dateFormat.format(_dueDate)}'),
+                Text('Due: ${_dueDate != null ? _dateFormat.format(_dueDate!) : 'Not Set'}'),
                 IconButton(
                   icon: Icon(Icons.calendar_today),
                   onPressed: () async {
                     final date = await showDatePicker(
                       context: context,
-                      initialDate: _dueDate,
+                      initialDate: _dueDate ?? _createdDate,
                       firstDate: _createdDate, // Can't be before created date
                       lastDate: DateTime(2100),
                     );
