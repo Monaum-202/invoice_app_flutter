@@ -4,6 +4,8 @@ import 'package:invo/models/client_model.dart';
 import 'package:invo/models/invoice_item.dart';
 import 'package:invo/models/invoice_model.dart';
 import 'package:invo/services/InvoiceService.dart';
+import 'package:invo/services/ProductService.dart';
+import 'package:invo/models/product_model.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'models/invoice_data.dart' as model;
@@ -471,8 +473,10 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     );
   }
 
-  Widget _buildItemsSection() {
-    return Card(
+ Widget _buildItemsSection() {
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(8.0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -495,65 +499,155 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
           else
             ConstrainedBox(
               constraints: BoxConstraints(maxHeight: 300),
-              child: ListView(
+              child: ListView.builder(
                 shrinkWrap: true,
-                children: items.map((item) {
+                physics: const BouncingScrollPhysics(),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
                   final quantity = double.tryParse(item['unit'] ?? '0') ?? 0;
                   final unitPrice = double.tryParse(item['price'] ?? '0') ?? 0;
                   final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
                   final itemTotal = quantity * unitPrice;
-                  final itemTax = itemTotal * tax / 100;
-                  
-                  return ListTile(
-                    title: Text(item['name'] ?? 'Item'),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (item['description']?.isNotEmpty ?? false)
-                          Text(
-                            item['description'] ?? '',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        Text(
-                          '${quantity.toStringAsFixed(0)} × ৳${unitPrice.toStringAsFixed(2)}',
-                        ),
-                        if (tax > 0)
-                          Text(
-                            'Tax: ${tax.toStringAsFixed(1)}%',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                      ],
+                  final taxAmount = itemTotal * tax / 100;
+
+                  return Dismissible(
+                    key: Key('item_$index'),
+                    background: Container(
+                      color: Colors.red,
+                      alignment: Alignment.centerRight,
+                      padding: EdgeInsets.only(right: 16),
+                      child: Icon(Icons.delete, color: Colors.white),
                     ),
-                    trailing: Container(
-                      width: 120,
-                      child: Column(
+                    direction: DismissDirection.endToStart,
+                    onDismissed: (direction) {
+                      setState(() {
+                        items.removeAt(index);
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Item removed')),
+                      );
+                    },
+                    child: ListTile(
+                      title: Text(item['name'] ?? 'Item'),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            '৳${itemTotal.toStringAsFixed(2)}',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
+                          Text('${quantity.toStringAsFixed(0)} × ৳${unitPrice.toStringAsFixed(2)}'),
                           if (tax > 0)
-                            Text(
-                              '+ ৳${itemTax.toStringAsFixed(2)}',
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
-                            ),
-                          Text(
-                            'Total: ৳${(itemTotal + itemTax).toStringAsFixed(2)}',
-                            style: TextStyle(fontSize: 12),
-                          ),
+                            Text('Tax: ${tax.toStringAsFixed(1)}%', style: TextStyle(color: Colors.grey)),
                         ],
+                      ),
+                      trailing: SizedBox(
+                        width: 140,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text('৳${itemTotal.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  if (tax > 0)
+                                    Text('+ ৳${taxAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                  Text('Total: ৳${(itemTotal + taxAmount).toStringAsFixed(2)}', style: TextStyle(fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            IconButton(
+                              icon: Icon(Icons.edit, size: 20, color: Colors.blue),
+                              onPressed: () => _editItem(index),
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(minWidth: 36, minHeight: 36),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
-                }).toList(),
+                },
               ),
             ),
         ],
       ),
+    ),
+  );
+}
+
+
+  void _editItem(int index) async {
+    final item = items[index];
+    final unitController = TextEditingController(text: item['unit']);
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Edit Item'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Item name (read-only)
+                TextField(
+                  controller: TextEditingController(text: item['name']),
+                  decoration: InputDecoration(labelText: 'Item Name'),
+                  readOnly: true,
+                ),
+                // Description (read-only)
+                TextField(
+                  controller: TextEditingController(text: item['description']),
+                  decoration: InputDecoration(labelText: 'Description'),
+                  readOnly: true,
+                ),
+                // Unit input
+                TextField(
+                  controller: unitController,
+                  decoration: InputDecoration(labelText: 'Quantity'),
+                  keyboardType: TextInputType.number,
+                ),
+                // Price (read-only)
+                TextField(
+                  controller: TextEditingController(text: item['price']),
+                  decoration: InputDecoration(labelText: 'Price per Unit'),
+                  readOnly: true,
+                ),
+                // Tax (read-only)
+                TextField(
+                  controller: TextEditingController(text: item['tax']),
+                  decoration: InputDecoration(labelText: 'Tax (%)'),
+                  readOnly: true,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final unit = double.tryParse(unitController.text) ?? 1;
+                final price = double.tryParse(item['price'] ?? '0') ?? 0;
+                final amount = unit * price;
+
+                setState(() {
+                  items[index] = {
+                    ...item,
+                    'unit': unit.toString(),
+                    'amount': amount.toStringAsFixed(2),
+                  };
+                });
+                Navigator.pop(context);
+              },
+              child: Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -907,81 +1001,108 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     }
   }
 
-  void _addItem() {
+  void _addItem() async {
+    final productService = ProductService();
+    List<Product> products = [];
+    try {
+      products = await productService.getAllProducts();
+    } catch (e) {
+      print('Error loading products: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load products')),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) {
-        final nameController = TextEditingController();
-        final descriptionController = TextEditingController();
-        final priceController = TextEditingController();
-        final taxController = TextEditingController();
-        final unitController = TextEditingController();
-        return AlertDialog(
-          title: Text('Add Item'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: 'Item Name'),
+        final unitController = TextEditingController(text: '1');
+        Product? selectedProduct;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Add Item'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Product Dropdown
+                    DropdownButtonFormField<Product>(
+                      decoration: InputDecoration(labelText: 'Select Product'),
+                      value: selectedProduct,
+                      items: products.map((Product product) {
+                        return DropdownMenuItem<Product>(
+                          value: product,
+                          child: Text(product.name ?? 'No name'),
+                        );
+                      }).toList(),
+                      onChanged: (Product? value) {
+                        setState(() {
+                          selectedProduct = value;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    if (selectedProduct != null) ...[
+                      // Description (read-only)
+                      TextField(
+                        controller: TextEditingController(text: selectedProduct?.description ?? ''),
+                        decoration: InputDecoration(labelText: 'Description'),
+                        readOnly: true,
+                      ),
+                      // Unit input
+                      TextField(
+                        controller: unitController,
+                        decoration: InputDecoration(labelText: 'Quantity'),
+                        keyboardType: TextInputType.number,
+                      ),
+                      // Price (read-only)
+                      TextField(
+                        controller: TextEditingController(text: selectedProduct?.price?.toString() ?? '0'),
+                        decoration: InputDecoration(labelText: 'Price per Unit'),
+                        readOnly: true,
+                      ),
+                      // Tax (read-only)
+                      TextField(
+                        controller: TextEditingController(text: selectedProduct?.taxRate?.toString() ?? '0'),
+                        decoration: InputDecoration(labelText: 'Tax (%)'),
+                        readOnly: true,
+                      ),
+                    ],
+                  ],
                 ),
-                TextField(
-                  controller: descriptionController,
-                  decoration: InputDecoration(labelText: 'Description'),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
                 ),
-                TextField(
-                  controller: unitController,
-                  decoration: InputDecoration(labelText: 'Unit'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: priceController,
-                  decoration: InputDecoration(labelText: 'Price per Unit'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: taxController,
-                  decoration: InputDecoration(
-                    labelText: 'Tax (%)',
-                    hintText: '0',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                if (nameController.text.isNotEmpty &&
-                    priceController.text.isNotEmpty &&
-                    unitController.text.isNotEmpty) {
-                  setState(() {
+                TextButton(
+                  onPressed: selectedProduct == null ? null : () {
                     final unit = double.tryParse(unitController.text) ?? 1;
-                    final price = double.tryParse(priceController.text) ?? 0;
-                    final tax = double.tryParse(taxController.text) ?? 0;
+                    final price = selectedProduct?.price ?? 0;
                     final amount = unit * price;
 
-                    items.add({
-                      'name': nameController.text,
-                      'description': descriptionController.text,
-                      'unit': unit.toString(),
-                      'price': price.toString(),
-                      'amount': amount.toStringAsFixed(2),
-                      'tax': tax.toString(),
+                    // Update the parent widget's state
+                    this.setState(() {
+                      items.add({
+                        'name': selectedProduct?.name ?? '',
+                        'description': selectedProduct?.description ?? '',
+                        'unit': unit.toString(),
+                        'price': price.toString(),
+                        'amount': amount.toStringAsFixed(2),
+                        'tax': selectedProduct?.taxRate?.toString() ?? '0',
+                      });
                     });
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: Text('Add'),
-            ),
-          ],
+                    Navigator.pop(context);
+                  },
+                  child: Text('Add'),
+                ),
+              ],
+            );
+          },
         );
       },
     );

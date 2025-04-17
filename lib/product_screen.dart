@@ -28,13 +28,10 @@ class _ProductListPageState extends State<ProductListPage> {
     setState(() {
       _isLoading = true;
     });
-
+    final productService = ProductService();
+List<Product> products = [];
     try {
-      final response = await _productService.getAll(page: _currentPage);
-      setState(() {
-        _productList = response['products'];
-        _totalPages = response['totalPages'];
-      });
+      products = await productService.getAllProducts();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading products')),
