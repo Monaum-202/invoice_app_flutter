@@ -7,8 +7,7 @@ class InvoiceService {
 
   Future<Invoice> createInvoice(Invoice invoice) async {
     try {
-      print("Creating invoice with due date: ${invoice.dueDate}");
-      print("Request body: ${jsonEncode(invoice.toJson())}");
+
       final response = await http.post(
         Uri.parse(baseUrl),
         headers: {
@@ -17,8 +16,7 @@ class InvoiceService {
         },
         body: jsonEncode(invoice.toJson()),
       );
-      print("Response status: ${response.statusCode}");
-      print("Response body: ${response.body}");
+
       if (response.statusCode == 201 || response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         print("Response data: $responseData");

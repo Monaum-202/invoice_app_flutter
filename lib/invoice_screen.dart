@@ -384,7 +384,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                                                       ),
                                                       const SizedBox(height: 4),
                                                       Text(
-                                                        invoice.businessInfo?.businessName ?? 'Business: N/A',
+                                                        invoice.companyName ?? 'Company: N/A',
                                                         style: const TextStyle(
                                                           fontSize: 14,
                                                           color: Colors.grey,

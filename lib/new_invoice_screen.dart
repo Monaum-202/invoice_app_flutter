@@ -40,6 +40,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     'address': '',
   };
 
+  String companyName = '';
   String terms = '';
   String paymentMethod = '';
   final List<Map<String, dynamic>> items = [];
@@ -96,12 +97,25 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
               // _buildSection(context, 'Language', language, Icons.language,
               //   onTap: () => _showOptionsDialog('Select Language', ['English', 'Bengali'],
               //     (value) => setState(() => language = value))),
+              
               _buildInvoiceInfo(),
-              _buildBusinessInfo(),
+              
               // _buildSection(context, 'Bill To', clientName.isEmpty ? 'Add Client' : clientName, Icons.person,
               //   onTap: () => _showInputDialog('Client Name', clientName,
               //     (value) => setState(() => clientName = value))),
               _buildClientInfo(),
+              _buildSection(
+                context,
+                'Company Name',
+                companyName.isEmpty ? 'Add Company Name' : companyName,
+                Icons.assignment,
+                onTap:
+                    () => _showInputDialog(
+                      'Company Name',
+                      companyName,
+                      (value) => setState(() => companyName = value),
+                    ),
+              ),
               _buildItemsSection(),
               _buildTotals(),
               // _buildSection(context, 'Currency', 'BDT ৳', Icons.attach_money),
@@ -110,7 +124,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                 context,
                 'Terms & Conditions',
                 terms.isEmpty ? 'Add Terms & Conditions' : terms,
-                Icons.assignment,
+                Icons.factory,
                 onTap:
                     () => _showInputDialog(
                       'Terms & Conditions',
@@ -249,122 +263,122 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     );
   }
 
-  Widget _buildBusinessInfo() {
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            title: Text(
-              'Business Information',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            trailing: ElevatedButton.icon(
-              onPressed: _editBusinessInfo,
-              icon: Icon(Icons.edit),
-              label: Text('Edit'),
-            ),
-          ),
-          if (businessInfo['businessName']?.isNotEmpty ?? false)
-            ListTile(
-              title: Text(businessInfo['businessName'] ?? ''),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (businessInfo['address']?.isNotEmpty ?? false)
-                    Text(businessInfo['address'] ?? ''),
-                  if (businessInfo['phone']?.isNotEmpty ??
-                      false || businessInfo['email']!.isNotEmpty ??
-                      false)
-                    Text(
-                      '${businessInfo['phone'] ?? ''} | ${businessInfo['email'] ?? ''}',
-                    ),
-                  if (businessInfo['taxId']?.isNotEmpty ?? false)
-                    Text('Tax ID: ${businessInfo['taxId']}'),
-                  if (businessInfo['website']?.isNotEmpty ?? false)
-                    Text(businessInfo['website'] ?? ''),
-                ],
-              ),
-            )
-          else
-            ListTile(
-              title: Text(
-                'No business information added',
-                style: TextStyle(color: Colors.grey),
-              ),
-              leading: Icon(Icons.business, color: Colors.grey),
-            ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildBusinessInfo() {
+  //   return Card(
+  //     child: Column(
+  //       children: [
+  //         ListTile(
+  //           title: Text(
+  //             'Business Information',
+  //             style: TextStyle(fontWeight: FontWeight.bold),
+  //           ),
+  //           trailing: ElevatedButton.icon(
+  //             onPressed: _editBusinessInfo,
+  //             icon: Icon(Icons.edit),
+  //             label: Text('Edit'),
+  //           ),
+  //         ),
+  //         if (businessInfo['businessName']?.isNotEmpty ?? false)
+  //           ListTile(
+  //             title: Text(businessInfo['businessName'] ?? ''),
+  //             subtitle: Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 if (businessInfo['address']?.isNotEmpty ?? false)
+  //                   Text(businessInfo['address'] ?? ''),
+  //                 if (businessInfo['phone']?.isNotEmpty ??
+  //                     false || businessInfo['email']!.isNotEmpty ??
+  //                     false)
+  //                   Text(
+  //                     '${businessInfo['phone'] ?? ''} | ${businessInfo['email'] ?? ''}',
+  //                   ),
+  //                 if (businessInfo['taxId']?.isNotEmpty ?? false)
+  //                   Text('Tax ID: ${businessInfo['taxId']}'),
+  //                 if (businessInfo['website']?.isNotEmpty ?? false)
+  //                   Text(businessInfo['website'] ?? ''),
+  //               ],
+  //             ),
+  //           )
+  //         else
+  //           ListTile(
+  //             title: Text(
+  //               'No business information added',
+  //               style: TextStyle(color: Colors.grey),
+  //             ),
+  //             leading: Icon(Icons.business, color: Colors.grey),
+  //           ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
-  void _editBusinessInfo() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        Map<String, String> tempInfo = Map.from(businessInfo);
+  // void _editBusinessInfo() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       Map<String, String> tempInfo = Map.from(businessInfo);
 
-        return AlertDialog(
-          title: Text('Edit Business Information'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  decoration: InputDecoration(labelText: 'Business Name'),
-                  controller: TextEditingController(
-                    text: tempInfo['businessName'],
-                  ),
-                  onChanged: (value) => tempInfo['businessName'] = value,
-                ),
-                TextField(
-                  decoration: InputDecoration(labelText: 'Address'),
-                  controller: TextEditingController(text: tempInfo['address']),
-                  onChanged: (value) => tempInfo['address'] = value,
-                ),
-                TextField(
-                  decoration: InputDecoration(labelText: 'Phone'),
-                  controller: TextEditingController(text: tempInfo['phone']),
-                  keyboardType: TextInputType.phone,
-                  onChanged: (value) => tempInfo['phone'] = value,
-                ),
-                TextField(
-                  decoration: InputDecoration(labelText: 'Email'),
-                  controller: TextEditingController(text: tempInfo['email']),
-                  keyboardType: TextInputType.emailAddress,
-                  onChanged: (value) => tempInfo['email'] = value,
-                ),
-                TextField(
-                  decoration: InputDecoration(labelText: 'Tax ID'),
-                  controller: TextEditingController(text: tempInfo['taxId']),
-                  onChanged: (value) => tempInfo['taxId'] = value,
-                ),
-                TextField(
-                  decoration: InputDecoration(labelText: 'Website'),
-                  controller: TextEditingController(text: tempInfo['website']),
-                  keyboardType: TextInputType.url,
-                  onChanged: (value) => tempInfo['website'] = value,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() => businessInfo = tempInfo);
-                Navigator.pop(context);
-              },
-              child: Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  //       return AlertDialog(
+  //         title: Text('Edit Business Information'),
+  //         content: SingleChildScrollView(
+  //           child: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             children: [
+  //               TextField(
+  //                 decoration: InputDecoration(labelText: 'Business Name'),
+  //                 controller: TextEditingController(
+  //                   text: tempInfo['businessName'],
+  //                 ),
+  //                 onChanged: (value) => tempInfo['businessName'] = value,
+  //               ),
+  //               TextField(
+  //                 decoration: InputDecoration(labelText: 'Address'),
+  //                 controller: TextEditingController(text: tempInfo['address']),
+  //                 onChanged: (value) => tempInfo['address'] = value,
+  //               ),
+  //               TextField(
+  //                 decoration: InputDecoration(labelText: 'Phone'),
+  //                 controller: TextEditingController(text: tempInfo['phone']),
+  //                 keyboardType: TextInputType.phone,
+  //                 onChanged: (value) => tempInfo['phone'] = value,
+  //               ),
+  //               TextField(
+  //                 decoration: InputDecoration(labelText: 'Email'),
+  //                 controller: TextEditingController(text: tempInfo['email']),
+  //                 keyboardType: TextInputType.emailAddress,
+  //                 onChanged: (value) => tempInfo['email'] = value,
+  //               ),
+  //               TextField(
+  //                 decoration: InputDecoration(labelText: 'Tax ID'),
+  //                 controller: TextEditingController(text: tempInfo['taxId']),
+  //                 onChanged: (value) => tempInfo['taxId'] = value,
+  //               ),
+  //               TextField(
+  //                 decoration: InputDecoration(labelText: 'Website'),
+  //                 controller: TextEditingController(text: tempInfo['website']),
+  //                 keyboardType: TextInputType.url,
+  //                 onChanged: (value) => tempInfo['website'] = value,
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.pop(context),
+  //             child: Text('Cancel'),
+  //           ),
+  //           ElevatedButton(
+  //             onPressed: () {
+  //               setState(() => businessInfo = tempInfo);
+  //               Navigator.pop(context);
+  //             },
+  //             child: Text('Save'),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   Widget _buildClientInfo() {
     return Card(
@@ -720,6 +734,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
         nid: clientInfo['nid'] ?? '',
         address: clientInfo['address'] ?? '',
       ),
+      companyName: companyName,
       createdBy: 1,
       items: formattedItems
           .map(
@@ -733,14 +748,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
             ),
           )
           .toList(),
-      businessInfo: BusinessInfo(
-        businessName: businessInfo['businessName'] ?? '',
-        address: businessInfo['address'] ?? '',
-        phone: businessInfo['phone'] ?? '',
-        email: businessInfo['email'] ?? '',
-        taxId: businessInfo['taxId'] ?? '',
-        website: businessInfo['website'] ?? '',
-      ),
+      
     );
 
     try {

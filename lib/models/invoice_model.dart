@@ -16,8 +16,8 @@ class Invoice {
   DateTime? dueDate;
   int? createdBy;
   Client? client;
+  String? companyName;
   List<InvoiceItem>? items;
-  BusinessInfo? businessInfo;
 
   Invoice({
     this.id,
@@ -33,8 +33,8 @@ class Invoice {
     this.dueDate,
     this.createdBy,
     this.client,
+    this.companyName,
     this.items,
-    this.businessInfo,
   });
 
   factory Invoice.fromJson(Map<String, dynamic> json) {
@@ -52,12 +52,11 @@ class Invoice {
       dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate']) : null,
       createdBy: json['createdBy'],
       client: json['client'] != null ? Client.fromJson(json['client']) : null,
+      companyName: json['companyName'],
       items: json['items'] != null 
           ? (json['items'] as List).map((e) => InvoiceItem.fromJson(e)).toList()
           : null,
-      businessInfo: json['businessInfo'] != null 
-          ? BusinessInfo.fromJson(json['businessInfo'])
-          : null,
+      
     );
   }
 
@@ -76,13 +75,14 @@ class Invoice {
       "dueDate": dueDate?.toIso8601String(),
       "createdBy": createdBy,
       "client": client?.toJson(),
+      "companyName": companyName,
       "items": items?.map((e) => e.toJson()).toList(),
-      "businessInfo": businessInfo?.toJson(),
+     
     };
   }
 
   @override
   String toString() {
-    return 'Invoice{id: $id, invoiceNumber: $invoiceNumber, subtotal: $subtotal, totalAmount: $totalAmount, paidAmount: $paidAmount, dueAmount: $dueAmount, discountPersentage: $discountPersentage, discountCash: $discountCash, status: $status, issueDate: $issueDate, dueDate: $dueDate, createdBy: $createdBy, client: ${client?.toString()}, items: ${items?.toString()}, businessInfo: ${businessInfo?.toString()}}';
+    return 'Invoice{id: $id, invoiceNumber: $invoiceNumber, subtotal: $subtotal, totalAmount: $totalAmount, paidAmount: $paidAmount, dueAmount: $dueAmount, discountPersentage: $discountPersentage, discountCash: $discountCash, status: $status, issueDate: $issueDate, dueDate: $dueDate, createdBy: $createdBy, client: ${client?.toString()}, items: ${items?.toString()}}}';
   }
 }
