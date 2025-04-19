@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'services/AuthService.dart';
+import 'services/BusinessInfoService.dart';
+import 'models/business_info.dart';
 
 class BusinessInfoScreen extends StatefulWidget {
   @override
@@ -9,99 +14,217 @@ class BusinessInfoScreen extends StatefulWidget {
 
 class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
   final _formKey = GlobalKey<FormState>();
-  File? _logoFile;
-  final ImagePicker _picker = ImagePicker();
+  final _picker = ImagePicker();
+  XFile? _logoFile;
+  bool _isLoading = false;
+  Uint8List? _logoBytes;
+
+  final _controllers = {
+    'businessName': TextEditingController(),
+    'email': TextEditingController(),
+    'phone': TextEditingController(),
+    'address': TextEditingController(),
+    'website': TextEditingController(),
+    'taxId': TextEditingController(),
+  };
+
+  Map<String, dynamic>? _userData;
+  BusinessInfo? _businessInfo;
+  final _service = BusinessInfoService();
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
+
+  Future<void> _initializeData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = prefs.getString('user');
+
+    if (userJson == null) return;
+
+    _userData = jsonDecode(userJson);
+    _loadBusinessInfo(_userData!['userName']);
+  }
+
+Future<void> _loadBusinessInfo(String userName) async {
+  setState(() => _isLoading = true);
+
+  try {
+    try {
+      final business = await _service.getBusinessInfoByUser(userName);
+      _businessInfo = business;
+      _populateForm();
+      return;
+    } catch (e) {
+      // Handle if it's just that no business info was found
+      if (!e.toString().contains('No business info found for user')) {
+        rethrow;
+      }
+    }
+
+    // No business info found: initialize a new one
+    _businessInfo = BusinessInfo(
+      businessName: '',
+      address: '',
+      phone: '',
+      email: '',
+      website: '',
+      createdBy: userName,
+    );
+    _populateForm();
+
+    _showMessage(
+      'Welcome! Please fill in your business information.',
+      Colors.blue,
+    );
+  } catch (e) {
+    _showMessage('Failed to load data: $e', Colors.red);
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
+  }
+}
+
+
+  void _populateForm() {
+    _controllers['businessName']!.text = _businessInfo?.businessName ?? '';
+    _controllers['email']!.text = _businessInfo?.email ?? '';
+    _controllers['phone']!.text = _businessInfo?.phone ?? '';
+    _controllers['address']!.text = _businessInfo?.address ?? '';
+    _controllers['website']!.text = _businessInfo?.website ?? '';
+    _controllers['taxId']!.text = _businessInfo?.taxId ?? '';
+  }
 
   Future<void> _pickLogo() async {
     try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-      );
-      
-      if (image != null) {
+      final pickedFile = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
         setState(() {
-          _logoFile = File(image.path);
+          _logoFile = pickedFile;
+          _logoBytes = bytes;
         });
+        if (_businessInfo?.id != null) await _uploadLogo();
       }
     } catch (e) {
-      print('Error picking image: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick image: $e')),
-        );
-      }
+      _showMessage('Failed to pick image: $e', Colors.red);
     }
+  }
+
+  Future<void> _uploadLogo() async {
+    if (_logoFile == null || _logoBytes == null) return;
+    
+    try {
+      final updated = await _service.uploadLogo(
+        _businessInfo!,
+        _logoBytes!,
+        _logoFile!.name,
+      );
+      setState(() => _businessInfo = updated);
+    } catch (e) {
+      _showMessage('Logo upload failed: $e', Colors.red);
+    }
+  }
+
+  Future<void> _saveBusinessInfo() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Prepare the business info object with form data
+      final businessData = BusinessInfo(
+        id: _businessInfo?.id, // This will be null for new business info
+        businessName: _controllers['businessName']!.text,
+        email: _controllers['email']!.text,
+        phone: _controllers['phone']!.text,
+        address: _controllers['address']!.text,
+        website: _controllers['website']!.text,
+        taxId: _controllers['taxId']!.text,
+        createdBy: _userData?['userName'] ?? '',
+      );
+
+      // If there's no ID, it's a new business info
+      final saved = businessData.id == null
+          ? await _service.createBusinessInfo(businessData)
+          : await _service.updateBusinessInfo(businessData);
+
+      setState(() => _businessInfo = saved);
+
+      if (_logoFile != null) await _uploadLogo();
+
+      _showMessage('Business info saved successfully', Colors.green);
+      Navigator.pop(context);
+    } catch (e) {
+      _showMessage('Save failed: $e', Colors.red);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showMessage(String msg, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: color,
+    ));
+  }
+
+  Widget _buildTextField(String label, String key, {bool required = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextFormField(
+        controller: _controllers[key],
+        decoration: InputDecoration(
+          labelText: required ? '$label *' : label,
+          border: OutlineInputBorder(),
+        ),
+        validator: required
+            ? (value) => (value == null || value.isEmpty) ? '$label is required' : null
+            : null,
+      ),
+    );
   }
 
   Widget _buildLogoUploader() {
     return Column(
       children: [
-        InkWell(
+        GestureDetector(
           onTap: _pickLogo,
-          child: Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              shape: BoxShape.circle,
-              image: _logoFile != null
-                  ? DecorationImage(
-                      image: FileImage(_logoFile!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: _logoFile == null
-                ? Icon(
-                    Icons.add_a_photo,
-                    size: 40,
-                    color: Colors.grey[600],
-                  )
+          child: CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.grey[200],
+            backgroundImage: _logoBytes != null ? MemoryImage(_logoBytes!) : null,
+            child: _logoBytes == null
+                ? Icon(Icons.add_a_photo, size: 40, color: Colors.grey[600])
                 : null,
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Tap to add logo',
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 12,
-          ),
-        ),
+        SizedBox(height: 8),
+        Text('Tap to add logo', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
       ],
     );
   }
 
-  Widget _buildTextField(String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextFormField(
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    _controllers.forEach((_, c) => c.dispose());
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: BackButton(),
-        title: Text("Business Info"),
+        title: Text('Business Information'),
         actions: [
-          IconButton(
-            icon: Icon(Icons.check),
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                // save logic here
-              }
-            },
-          )
+          _isLoading
+              ? Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
+              : IconButton(icon: Icon(Icons.save), onPressed: _saveBusinessInfo),
         ],
       ),
       body: SingleChildScrollView(
@@ -111,14 +234,13 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
           child: Column(
             children: [
               _buildLogoUploader(),
-              const SizedBox(height: 20),
-              _buildTextField("Business Name *"),
-              _buildTextField("Email Address"),
-              _buildTextField("Phone Number"),
-              _buildTextField("Billing Address"),
-              _buildTextField("Business Website"),
-              _buildTextField("Tax Name (e.g. GSTIN, VAT, TIN etc.)"),
-              _buildTextField("Tax ID"),
+              SizedBox(height: 20),
+              _buildTextField('Business Name', 'businessName', required: true),
+              _buildTextField('Email', 'email'),
+              _buildTextField('Phone', 'phone'),
+              _buildTextField('Address', 'address'),
+              _buildTextField('Website', 'website'),
+              _buildTextField('Tax ID', 'taxId'),
             ],
           ),
         ),
@@ -127,186 +249,75 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
   }
 }
 
-class BusinessInfoEdit extends StatefulWidget {
-  final Map<String, String> initialBusinessInfo;
-  final File? initialLogo;
-  final Function(Map<String, String>, File?) onSave;
 
-  const BusinessInfoEdit({
-    Key? key,
-    required this.initialBusinessInfo,
-    this.initialLogo,
-    required this.onSave,
-  }) : super(key: key);
-
-  @override
-  State<BusinessInfoEdit> createState() => _BusinessInfoEditState();
-}
-
-class _BusinessInfoEditState extends State<BusinessInfoEdit> {
-  late Map<String, String> businessInfo;
-  File? _logoFile;
-
-  @override
-  void initState() {
-    super.initState();
-    businessInfo = Map.from(widget.initialBusinessInfo);
-    _logoFile = widget.initialLogo;
-  }
-
-  Future<void> _pickLogo() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-      );
-      
-      if (image != null) {
-        setState(() {
-          _logoFile = File(image.path);
-        });
-      }
-    } catch (e) {
-      print('Error picking image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to pick image: $e')),
-      );
-    }
-  }
-
+class MyBusinessScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Edit Business Info'),
+        title: Text('My Business'),
+        leading: Icon(Icons.arrow_back),
         actions: [
-          IconButton(
-            icon: Icon(Icons.save),
-            onPressed: () {
-              widget.onSave(businessInfo, _logoFile);
-              Navigator.pop(context);
-            },
-          ),
+          Icon(Icons.check),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Logo Section
-            Center(
-              child: Stack(
-                children: [
-                  Container(
-                    width: 150,
-                    height: 150,
+            // Selected Business
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.green[100],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.teal),
+              ),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.yellow,
+                  child: Icon(Icons.storefront, color: Colors.white),
+                ),
+                title: Text('Jersey tenda'),
+                trailing: Icon(Icons.edit),
+              ),
+            ),
+            SizedBox(height: 16),
+            // Add New Business (PRO)
+            Stack(
+              alignment: Alignment.topLeft,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.black,
+                      child: Icon(Icons.add, color: Colors.white),
+                    ),
+                    title: Text('Add New Business'),
+                  ),
+                ),
+                Positioned(
+                  top: -4,
+                  left: -4,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: _logoFile != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.file(
-                              _logoFile!,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : Icon(
-                            Icons.business,
-                            size: 80,
-                            color: Colors.grey[400],
-                          ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: IconButton(
-                        icon: Icon(Icons.camera_alt, color: Colors.white),
-                        onPressed: _pickLogo,
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        bottomRight: Radius.circular(12),
                       ),
                     ),
+                    child: Text(
+                      'PRO',
+                      style: TextStyle(color: Colors.white, fontSize: 10),
+                    ),
                   ),
-                ],
-              ),
-            ),
-            SizedBox(height: 24),
-
-            // Business Info Fields
-            TextFormField(
-              initialValue: businessInfo['businessName'],
-              decoration: InputDecoration(
-                labelText: 'Business Name',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.business),
-              ),
-              onChanged: (value) => businessInfo['businessName'] = value,
-            ),
-            SizedBox(height: 16),
-
-            TextFormField(
-              initialValue: businessInfo['address'],
-              decoration: InputDecoration(
-                labelText: 'Address',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.location_on),
-              ),
-              maxLines: 2,
-              onChanged: (value) => businessInfo['address'] = value,
-            ),
-            SizedBox(height: 16),
-
-            TextFormField(
-              initialValue: businessInfo['phone'],
-              decoration: InputDecoration(
-                labelText: 'Phone',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.phone),
-              ),
-              keyboardType: TextInputType.phone,
-              onChanged: (value) => businessInfo['phone'] = value,
-            ),
-            SizedBox(height: 16),
-
-            TextFormField(
-              initialValue: businessInfo['email'],
-              decoration: InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.email),
-              ),
-              keyboardType: TextInputType.emailAddress,
-              onChanged: (value) => businessInfo['email'] = value,
-            ),
-            SizedBox(height: 16),
-
-            TextFormField(
-              initialValue: businessInfo['taxId'],
-              decoration: InputDecoration(
-                labelText: 'Tax ID',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.receipt),
-              ),
-              onChanged: (value) => businessInfo['taxId'] = value,
-            ),
-            SizedBox(height: 16),
-
-            TextFormField(
-              initialValue: businessInfo['website'],
-              decoration: InputDecoration(
-                labelText: 'Website',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.web),
-              ),
-              keyboardType: TextInputType.url,
-              onChanged: (value) => businessInfo['website'] = value,
+                )
+              ],
             ),
           ],
         ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:invo/models/business_info.dart';
 import 'package:invo/models/client_model.dart';
 import 'package:invo/models/invoice_item.dart';
 import 'package:invo/models/invoice_model.dart';
@@ -644,9 +643,6 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
       return;
     }
 
-    print('=== Debug Save Invoice ===');
-    print('User Data: $_userData');
-    print('User ID being used: ${_userData!['id']}');
 
     final subtotal =
         _calculateSubtotal(); // This now includes item prices + tax
