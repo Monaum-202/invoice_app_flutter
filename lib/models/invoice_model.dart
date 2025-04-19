@@ -14,7 +14,7 @@ class Invoice {
   String? status;
   DateTime? issueDate;
   DateTime? dueDate;
-  int? createdBy;
+  String? createdBy;
   Client? client;
   String? companyName;
   List<InvoiceItem>? items;

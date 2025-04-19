@@ -1,20 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:invo/bottomNav.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() => runApp(MyApp());
 
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Login Page',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: LoginPage(),
-    );
-  }
-}
 
 class LoginPage extends StatefulWidget {
   @override
@@ -25,6 +15,51 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  Future<void> _login() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text;
+    final url = Uri.parse('http://localhost:9090/api/auth/signin'); // <-- Set your API URL here
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': username,
+          'password': password,
+        }),
+      );
+
+      
+      final data = jsonDecode(response.body);
+
+      
+      if (response.statusCode == 200 && data['jwtToken'] != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token', data['jwtToken'] ?? '');
+        if (data['user'] != null) {
+          final userJson = jsonEncode(data['user']);
+          print('Saving user data to SharedPreferences: $userJson');
+          await prefs.setString('user', userJson);
+        } else {
+          print('Warning: User data is null in the response');
+        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen(initialIndex: 0)), // Navigate to Invoices tab
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed (status: ${response.statusCode}): ${response.body}')),
+        );
+      }
+    } catch (e) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -119,13 +154,12 @@ class _LoginPageState extends State<LoginPage> {
 
                     // Login button
                     ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         if (_formKey.currentState?.validate() ?? false) {
-                          // If the form is valid, process the login
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Logging in...')),
                           );
-                          // You can add your login logic here
+                          await _login();
                         }
                       },
                       child: Text('Login'),

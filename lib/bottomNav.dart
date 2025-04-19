@@ -1,30 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:invo/invoice_screen.dart';
+import 'package:invo/more_screen.dart';
 import 'package:invo/new_invoice_screen.dart';
 import 'product_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int initialIndex;
+  const HomeScreen({Key? key, this.initialIndex = 0}) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
   final List<Widget> _screens = [
     InvoiceListPage(),
     Center(child: Text("Estimates Screen")),
     Center(child: Text("Clients Screen")),
     ProductListPage(),
-    Center(child: Text("More Options Screen")),
+    MoreScreen(),
   ];
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
   }
 
   @override

@@ -8,6 +8,11 @@ import 'package:invo/services/ProductService.dart';
 import 'package:invo/models/product_model.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'business_info_edit.dart';
 import 'models/invoice_data.dart' as model;
 
 class NewInvoiceScreen extends StatefulWidget {
@@ -23,6 +28,8 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
   String status = 'Unpaid';
   String template = 'Default';
   String language = 'English';
+  Map<String, dynamic>? _userData;
+  File? _logoFile;
   Map<String, String> businessInfo = {
     'businessName': '',
     'address': '',
@@ -51,24 +58,37 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
   double _shipping = 0.0;
   double _advancePaid = 0.0;
   double _paidAmount = 0.0;
-  
+
   final double _taxRate = 0.15;
   int _invoiceNumber = 1;
 
   DateTime _createdDate = DateTime.now();
-  DateTime? _dueDate;  // Changed to nullable and removed default value
+  DateTime? _dueDate; // Changed to nullable and removed default value
 
   @override
   void initState() {
     super.initState();
     print('=== Initial Client Info ===');
     print(clientInfo);
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userString = prefs.getString('user');
+    print('=== Debug User Data ===');
+    print('User String from SharedPreferences: $userString');
+    if (userString != null) {
+      final decoded = jsonDecode(userString);
+      print('Decoded User Data: $decoded');
+      setState(() {
+        _userData = decoded;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    print('=== Build Client Info ===');
-    print(clientInfo);
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
@@ -94,12 +114,12 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                       'Simple',
                     ], (value) => setState(() => template = value)),
               ),
+
               // _buildSection(context, 'Language', language, Icons.language,
               //   onTap: () => _showOptionsDialog('Select Language', ['English', 'Bengali'],
               //     (value) => setState(() => language = value))),
-              
               _buildInvoiceInfo(),
-              
+
               // _buildSection(context, 'Bill To', clientName.isEmpty ? 'Add Client' : clientName, Icons.person,
               //   onTap: () => _showInputDialog('Client Name', clientName,
               //     (value) => setState(() => clientName = value))),
@@ -198,7 +218,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     );
   }
 
-  Widget _buildInvoiceInfo() {
+   Widget _buildInvoiceInfo() {
     return Card(
       child: Column(
         children: [
@@ -263,123 +283,6 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     );
   }
 
-  // Widget _buildBusinessInfo() {
-  //   return Card(
-  //     child: Column(
-  //       children: [
-  //         ListTile(
-  //           title: Text(
-  //             'Business Information',
-  //             style: TextStyle(fontWeight: FontWeight.bold),
-  //           ),
-  //           trailing: ElevatedButton.icon(
-  //             onPressed: _editBusinessInfo,
-  //             icon: Icon(Icons.edit),
-  //             label: Text('Edit'),
-  //           ),
-  //         ),
-  //         if (businessInfo['businessName']?.isNotEmpty ?? false)
-  //           ListTile(
-  //             title: Text(businessInfo['businessName'] ?? ''),
-  //             subtitle: Column(
-  //               crossAxisAlignment: CrossAxisAlignment.start,
-  //               children: [
-  //                 if (businessInfo['address']?.isNotEmpty ?? false)
-  //                   Text(businessInfo['address'] ?? ''),
-  //                 if (businessInfo['phone']?.isNotEmpty ??
-  //                     false || businessInfo['email']!.isNotEmpty ??
-  //                     false)
-  //                   Text(
-  //                     '${businessInfo['phone'] ?? ''} | ${businessInfo['email'] ?? ''}',
-  //                   ),
-  //                 if (businessInfo['taxId']?.isNotEmpty ?? false)
-  //                   Text('Tax ID: ${businessInfo['taxId']}'),
-  //                 if (businessInfo['website']?.isNotEmpty ?? false)
-  //                   Text(businessInfo['website'] ?? ''),
-  //               ],
-  //             ),
-  //           )
-  //         else
-  //           ListTile(
-  //             title: Text(
-  //               'No business information added',
-  //               style: TextStyle(color: Colors.grey),
-  //             ),
-  //             leading: Icon(Icons.business, color: Colors.grey),
-  //           ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  // void _editBusinessInfo() {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) {
-  //       Map<String, String> tempInfo = Map.from(businessInfo);
-
-  //       return AlertDialog(
-  //         title: Text('Edit Business Information'),
-  //         content: SingleChildScrollView(
-  //           child: Column(
-  //             mainAxisSize: MainAxisSize.min,
-  //             children: [
-  //               TextField(
-  //                 decoration: InputDecoration(labelText: 'Business Name'),
-  //                 controller: TextEditingController(
-  //                   text: tempInfo['businessName'],
-  //                 ),
-  //                 onChanged: (value) => tempInfo['businessName'] = value,
-  //               ),
-  //               TextField(
-  //                 decoration: InputDecoration(labelText: 'Address'),
-  //                 controller: TextEditingController(text: tempInfo['address']),
-  //                 onChanged: (value) => tempInfo['address'] = value,
-  //               ),
-  //               TextField(
-  //                 decoration: InputDecoration(labelText: 'Phone'),
-  //                 controller: TextEditingController(text: tempInfo['phone']),
-  //                 keyboardType: TextInputType.phone,
-  //                 onChanged: (value) => tempInfo['phone'] = value,
-  //               ),
-  //               TextField(
-  //                 decoration: InputDecoration(labelText: 'Email'),
-  //                 controller: TextEditingController(text: tempInfo['email']),
-  //                 keyboardType: TextInputType.emailAddress,
-  //                 onChanged: (value) => tempInfo['email'] = value,
-  //               ),
-  //               TextField(
-  //                 decoration: InputDecoration(labelText: 'Tax ID'),
-  //                 controller: TextEditingController(text: tempInfo['taxId']),
-  //                 onChanged: (value) => tempInfo['taxId'] = value,
-  //               ),
-  //               TextField(
-  //                 decoration: InputDecoration(labelText: 'Website'),
-  //                 controller: TextEditingController(text: tempInfo['website']),
-  //                 keyboardType: TextInputType.url,
-  //                 onChanged: (value) => tempInfo['website'] = value,
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //         actions: [
-  //           TextButton(
-  //             onPressed: () => Navigator.pop(context),
-  //             child: Text('Cancel'),
-  //           ),
-  //           ElevatedButton(
-  //             onPressed: () {
-  //               setState(() => businessInfo = tempInfo);
-  //               Navigator.pop(context);
-  //             },
-  //             child: Text('Save'),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
-
   Widget _buildClientInfo() {
     return Card(
       child: Column(
@@ -432,41 +335,59 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
       context: context,
       builder: (context) {
         Map<String, String> tempInfo = Map.from(clientInfo);
+        final _formKey = GlobalKey<FormState>();
 
         return AlertDialog(
           title: Text('Edit Client Information'),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: TextEditingController(text: tempInfo['name']),
-                  decoration: InputDecoration(labelText: 'Client Name'),
-                  onChanged: (value) => tempInfo['name'] = value,
-                ),
-                TextField(
-                  controller: TextEditingController(text: tempInfo['email']),
-                  decoration: InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                  onChanged: (value) => tempInfo['email'] = value,
-                ),
-                TextField(
-                  controller: TextEditingController(text: tempInfo['phone']),
-                  decoration: InputDecoration(labelText: 'Phone'),
-                  keyboardType: TextInputType.phone,
-                  onChanged: (value) => tempInfo['phone'] = value,
-                ),
-                TextField(
-                  controller: TextEditingController(text: tempInfo['nid']),
-                  decoration: InputDecoration(labelText: 'NID (National ID)'),
-                  onChanged: (value) => tempInfo['nid'] = value,
-                ),
-                TextField(
-                  controller: TextEditingController(text: tempInfo['address']),
-                  decoration: InputDecoration(labelText: 'Address'),
-                  onChanged: (value) => tempInfo['address'] = value,
-                ),
-              ],
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: TextEditingController(text: tempInfo['name']),
+                    decoration: InputDecoration(labelText: 'Client Name'),
+                    onChanged: (value) => tempInfo['name'] = value,
+                  ),
+                  TextFormField(
+                    controller: TextEditingController(text: tempInfo['email']),
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      helperText: 'Required',
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Email is required';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Please enter a valid email';
+                      }
+                      return null;
+                    },
+                    onChanged: (value) => tempInfo['email'] = value,
+                  ),
+                  TextFormField(
+                    controller: TextEditingController(text: tempInfo['phone']),
+                    decoration: InputDecoration(labelText: 'Phone'),
+                    keyboardType: TextInputType.phone,
+                    onChanged: (value) => tempInfo['phone'] = value,
+                  ),
+                  TextFormField(
+                    controller: TextEditingController(text: tempInfo['nid']),
+                    decoration: InputDecoration(labelText: 'NID (National ID)'),
+                    onChanged: (value) => tempInfo['nid'] = value,
+                  ),
+                  TextFormField(
+                    controller: TextEditingController(
+                      text: tempInfo['address'],
+                    ),
+                    decoration: InputDecoration(labelText: 'Address'),
+                    onChanged: (value) => tempInfo['address'] = value,
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -476,8 +397,10 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                setState(() => clientInfo = tempInfo);
-                Navigator.pop(context);
+                if (_formKey.currentState!.validate()) {
+                  setState(() => clientInfo = tempInfo);
+                  Navigator.pop(context);
+                }
               },
               child: Text('Save'),
             ),
@@ -487,114 +410,143 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     );
   }
 
- Widget _buildItemsSection() {
-  return Card(
-    child: Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            title: Text('Items', style: TextStyle(fontWeight: FontWeight.bold)),
-            trailing: ElevatedButton.icon(
-              onPressed: _addItem,
-              icon: Icon(Icons.add),
-              label: Text('Add Item'),
-            ),
-          ),
-          if (items.isEmpty)
+  Widget _buildItemsSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             ListTile(
               title: Text(
-                'No items added',
-                style: TextStyle(color: Colors.grey),
+                'Items',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              leading: Icon(Icons.shopping_cart, color: Colors.grey),
-            )
-          else
-            ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: 300),
-              child: ListView.builder(
-                shrinkWrap: true,
-                physics: const BouncingScrollPhysics(),
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  final quantity = double.tryParse(item['unit'] ?? '0') ?? 0;
-                  final unitPrice = double.tryParse(item['price'] ?? '0') ?? 0;
-                  final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
-                  final itemTotal = quantity * unitPrice;
-                  final taxAmount = itemTotal * tax / 100;
-
-                  return Dismissible(
-                    key: Key('item_$index'),
-                    background: Container(
-                      color: Colors.red,
-                      alignment: Alignment.centerRight,
-                      padding: EdgeInsets.only(right: 16),
-                      child: Icon(Icons.delete, color: Colors.white),
-                    ),
-                    direction: DismissDirection.endToStart,
-                    onDismissed: (direction) {
-                      setState(() {
-                        items.removeAt(index);
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Item removed')),
-                      );
-                    },
-                    child: ListTile(
-                      title: Text(item['name'] ?? 'Item'),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('${quantity.toStringAsFixed(0)} × ৳${unitPrice.toStringAsFixed(2)}'),
-                          if (tax > 0)
-                            Text('Tax: ${tax.toStringAsFixed(1)}%', style: TextStyle(color: Colors.grey)),
-                        ],
-                      ),
-                      trailing: SizedBox(
-                        width: 140,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text('৳${itemTotal.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  if (tax > 0)
-                                    Text('+ ৳${taxAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                  Text('Total: ৳${(itemTotal + taxAmount).toStringAsFixed(2)}', style: TextStyle(fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                            SizedBox(width: 4),
-                            IconButton(
-                              icon: Icon(Icons.edit, size: 20, color: Colors.blue),
-                              onPressed: () => _editItem(index),
-                              padding: EdgeInsets.zero,
-                              constraints: BoxConstraints(minWidth: 36, minHeight: 36),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
+              trailing: ElevatedButton.icon(
+                onPressed: _addItem,
+                icon: Icon(Icons.add),
+                label: Text('Add Item'),
               ),
             ),
-        ],
-      ),
-    ),
-  );
-}
+            if (items.isEmpty)
+              ListTile(
+                title: Text(
+                  'No items added',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                leading: Icon(Icons.shopping_cart, color: Colors.grey),
+              )
+            else
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: 300),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    final quantity = double.tryParse(item['unit'] ?? '0') ?? 0;
+                    final unitPrice =
+                        double.tryParse(item['price'] ?? '0') ?? 0;
+                    final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
+                    final itemTotal = quantity * unitPrice;
+                    final taxAmount = itemTotal * tax / 100;
 
+                    return Dismissible(
+                      key: Key('item_$index'),
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: EdgeInsets.only(right: 16),
+                        child: Icon(Icons.delete, color: Colors.white),
+                      ),
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (direction) {
+                        setState(() {
+                          items.removeAt(index);
+                        });
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Item removed')));
+                      },
+                      child: ListTile(
+                        title: Text(item['name'] ?? 'Item'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${quantity.toStringAsFixed(0)} × ৳${unitPrice.toStringAsFixed(2)}',
+                            ),
+                            if (tax > 0)
+                              Text(
+                                'Tax: ${tax.toStringAsFixed(1)}%',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                          ],
+                        ),
+                        trailing: SizedBox(
+                          width: 140,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '৳${itemTotal.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (tax > 0)
+                                      Text(
+                                        '+ ৳${taxAmount.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    Text(
+                                      'Total: ৳${(itemTotal + taxAmount).toStringAsFixed(2)}',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 4),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.edit,
+                                  size: 20,
+                                  color: Colors.blue,
+                                ),
+                                onPressed: () => _editItem(index),
+                                padding: EdgeInsets.zero,
+                                constraints: BoxConstraints(
+                                  minWidth: 36,
+                                  minHeight: 36,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _editItem(int index) async {
     final item = items[index];
     final unitController = TextEditingController(text: item['unit']);
-    
+
     showDialog(
       context: context,
       builder: (context) {
@@ -665,15 +617,47 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     );
   }
 
-  void _saveInvoice() async {
-    final subtotal = _calculateSubtotal();  // This now includes item prices + tax
+  Future<void> _saveInvoice() async {
+    // Check if client email is provided
+    if (clientInfo['email']?.isEmpty ?? true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Client email is required. Please add client information.',
+          ),
+          backgroundColor: Colors.red,
+          action: SnackBarAction(label: 'Add Info', onPressed: _editClientInfo),
+        ),
+      );
+      return;
+    }
+
+    if (_userData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'User information not found. Please try logging in again.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    print('=== Debug Save Invoice ===');
+    print('User Data: $_userData');
+    print('User ID being used: ${_userData!['id']}');
+
+    final subtotal =
+        _calculateSubtotal(); // This now includes item prices + tax
     final discountPercentage = _discountPercentage;
-    final discountAmount = _discountPercentage > 0 
-        ? (subtotal * _discountPercentage / 100) 
-        : _discountAmount;
+    final discountAmount =
+        _discountPercentage > 0
+            ? (subtotal * _discountPercentage / 100)
+            : _discountAmount;
     final itemTax = _calculateItemTax();
     final shipping = _shipping;
-    
+
     // Calculate total before payments
     final totalAmount = _calculateTotal(
       subtotal,
@@ -681,32 +665,22 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
       shipping,
       0,
       0,
-      itemTax  // This won't be added again since it's in subtotal
+      itemTax, // This won't be added again since it's in subtotal
     );
 
     final totalPaid = _advancePaid + _paidAmount;
     final dueAmount = totalAmount - totalPaid;
 
-    print('=== Invoice Calculations ===');
-    print('Subtotal (including tax): $subtotal');
-    print('Item Level Tax (included in subtotal): $itemTax');
-    print('Discount Percentage: $discountPercentage%');
-    print('Discount Amount: $discountAmount');
-    print('Shipping: $shipping');
-    print('Total Amount: $totalAmount');
-    print('Total Paid: $totalPaid');
-    print('Due Amount: $dueAmount');
-    print('========================');
-
     // Convert items to the correct format
     final List<Map<String, dynamic>> formattedItems =
         items.map((item) {
           final quantity = double.tryParse(item['unit'] ?? '0') ?? 0;
-          final unitPrice = double.tryParse(item['price'] ?? '0') ?? 0;
+          final unitPrice =
+              double.tryParse(item['price'] ?? '0') ?? 0;
           final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
           final itemTotal = quantity * unitPrice;
           final taxAmount = itemTotal * tax / 100;
-          
+
           return {
             'itemName': item['name'] ?? '',
             'quantity': quantity,
@@ -735,20 +709,20 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
         address: clientInfo['address'] ?? '',
       ),
       companyName: companyName,
-      createdBy: 1,
-      items: formattedItems
-          .map(
-            (item) => InvoiceItem(
-              itemName: item['itemName'] ?? '',
-              quantity: item['quantity'].toInt(),
-              unitPrice: item['unitPrice'],
-              totalPrice: item['totalPrice'],
-              tax: item['tax'],
-              taxAmount: item['taxAmount'],
-            ),
-          )
-          .toList(),
-      
+      createdBy: _userData!['userName'],
+      items:
+          formattedItems
+              .map(
+                (item) => InvoiceItem(
+                  itemName: item['itemName'] ?? '',
+                  quantity: item['quantity'].toInt(),
+                  unitPrice: item['unitPrice'],
+                  totalPrice: item['totalPrice'],
+                  tax: item['tax'],
+                  taxAmount: item['taxAmount'],
+                ),
+              )
+              .toList(),
     );
 
     try {
@@ -781,7 +755,9 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
       final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
       final itemTotal = quantity * unitPrice;
       final itemTax = itemTotal * tax / 100;
-      return sum + itemTotal + itemTax;  // Include both price and tax in subtotal
+      return sum +
+          itemTotal +
+          itemTax; // Include both price and tax in subtotal
     });
   }
 
@@ -808,11 +784,13 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
   }
 
   Widget _buildTotals() {
-    final subtotal = _calculateSubtotal();  // This now includes item prices + tax
+    final subtotal =
+        _calculateSubtotal(); // This now includes item prices + tax
     final discountPercentage = _discountPercentage;
-    final discountAmount = _discountPercentage > 0 
-        ? (subtotal * _discountPercentage / 100) 
-        : _discountAmount;
+    final discountAmount =
+        _discountPercentage > 0
+            ? (subtotal * _discountPercentage / 100)
+            : _discountAmount;
     final itemTax = _calculateItemTax();
     final shipping = _shipping;
     final advancePaid = _advancePaid;
@@ -823,7 +801,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
       shipping,
       0,
       0,
-      itemTax  // This won't be added again since it's in subtotal
+      itemTax, // This won't be added again since it's in subtotal
     );
 
     final totalPaid = advancePaid + paidAmount;
@@ -832,47 +810,59 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     return Card(
       child: Column(
         children: [
-          _buildTotalRow('Subtotal (including tax)', '৳${subtotal.toStringAsFixed(2)}'),
+          _buildTotalRow(
+            'Subtotal (including tax)',
+            '৳${subtotal.toStringAsFixed(2)}',
+          ),
           _buildTotalRow(
             'Discount Percentage',
             '${_discountPercentage.toStringAsFixed(2)}%',
             isEditable: true,
-            onTap: () => _showInputDialog(
-              'Enter Discount Percentage',
-              _discountPercentage.toString(),
-              (value) {
-                setState(() {
-                  _discountPercentage = double.tryParse(value) ?? 0.0;
-                  _discountAmount = 0.0; // Reset amount when percentage is set
-                });
-              },
-            ),
+            onTap:
+                () => _showInputDialog(
+                  'Enter Discount Percentage',
+                  _discountPercentage.toString(),
+                  (value) {
+                    setState(() {
+                      _discountPercentage = double.tryParse(value) ?? 0.0;
+                      _discountAmount =
+                          0.0; // Reset amount when percentage is set
+                    });
+                  },
+                ),
           ),
           _buildTotalRow(
             'Discount Amount',
             '৳${discountAmount.toStringAsFixed(2)}',
             isEditable: true,
-            onTap: () => _showInputDialog(
-              'Enter Discount Amount',
-              _discountAmount.toString(),
-              (value) {
-                setState(() {
-                  _discountAmount = double.tryParse(value) ?? 0.0;
-                  _discountPercentage = 0.0; // Reset percentage when amount is set
-                });
-              },
-            ),
+            onTap:
+                () => _showInputDialog(
+                  'Enter Discount Amount',
+                  _discountAmount.toString(),
+                  (value) {
+                    setState(() {
+                      _discountAmount = double.tryParse(value) ?? 0.0;
+                      _discountPercentage =
+                          0.0; // Reset percentage when amount is set
+                    });
+                  },
+                ),
           ),
-          _buildTotalRow('Item Level Tax (included in subtotal)', '৳${itemTax.toStringAsFixed(2)}'),
+          _buildTotalRow(
+            'Item Level Tax (included in subtotal)',
+            '৳${itemTax.toStringAsFixed(2)}',
+          ),
           _buildTotalRow(
             'Shipping',
             '৳${shipping.toStringAsFixed(2)}',
             isEditable: true,
-            onTap: () => _showInputDialog(
-              'Enter Shipping Amount',
-              _shipping.toString(),
-              (value) => setState(() => _shipping = double.tryParse(value) ?? 0.0),
-            ),
+            onTap:
+                () => _showInputDialog(
+                  'Enter Shipping Amount',
+                  _shipping.toString(),
+                  (value) =>
+                      setState(() => _shipping = double.tryParse(value) ?? 0.0),
+                ),
           ),
           Divider(),
           _buildTotalRow('Total', '৳${total.toStringAsFixed(2)}', isBold: true),
@@ -880,31 +870,37 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
             'Advance Paid',
             '৳${advancePaid.toStringAsFixed(2)}',
             isEditable: true,
-            onTap: () => _showInputDialog(
-              'Enter Advance Paid Amount',
-              _advancePaid.toString(),
-              (value) => setState(() => _advancePaid = double.tryParse(value) ?? 0.0),
-            ),
+            onTap:
+                () => _showInputDialog(
+                  'Enter Advance Paid Amount',
+                  _advancePaid.toString(),
+                  (value) => setState(
+                    () => _advancePaid = double.tryParse(value) ?? 0.0,
+                  ),
+                ),
           ),
           _buildTotalRow(
             'Paid Amount',
             '৳${paidAmount.toStringAsFixed(2)}',
             isEditable: true,
-            onTap: () => _showInputDialog(
-              'Enter Paid Amount',
-              _paidAmount.toString(),
-              (value) => setState(() => _paidAmount = double.tryParse(value) ?? 0.0),
-            ),
+            onTap:
+                () => _showInputDialog(
+                  'Enter Paid Amount',
+                  _paidAmount.toString(),
+                  (value) => setState(
+                    () => _paidAmount = double.tryParse(value) ?? 0.0,
+                  ),
+                ),
           ),
           _buildTotalRow(
-            'Total Paid', 
-            '৳${totalPaid.toStringAsFixed(2)}', 
-            isBold: true
+            'Total Paid',
+            '৳${totalPaid.toStringAsFixed(2)}',
+            isBold: true,
           ),
           _buildTotalRow(
-            'Due Amount', 
-            '৳${dueAmount.toStringAsFixed(2)}', 
-            isBold: true
+            'Due Amount',
+            '৳${dueAmount.toStringAsFixed(2)}',
+            isBold: true,
           ),
         ],
       ),
@@ -938,10 +934,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                 ),
               ),
               if (isEditable)
-                IconButton(
-                  icon: Icon(Icons.edit),
-                  onPressed: onTap,
-                ),
+                IconButton(icon: Icon(Icons.edit), onPressed: onTap),
             ],
           ),
         ],
@@ -1009,27 +1002,30 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     }
   }
 
-  void _addItem() async {
-    final productService = ProductService();
+  Future<void> _addItem() async {
+    final ProductService productService = ProductService();
     List<Product> products = [];
+
     try {
       products = await productService.getAllProducts();
     } catch (e) {
       print('Error loading products: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load products')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load products')));
       return;
     }
 
-    showDialog(
+    if (!context.mounted) return;
+
+    final unitController = TextEditingController(text: '1');
+    Product? selectedProduct;
+
+    await showDialog(
       context: context,
       builder: (context) {
-        final unitController = TextEditingController(text: '1');
-        Product? selectedProduct;
-
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (context, setDialogState) {
             return AlertDialog(
               title: Text('Add Item'),
               content: SingleChildScrollView(
@@ -1047,7 +1043,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                         );
                       }).toList(),
                       onChanged: (Product? value) {
-                        setState(() {
+                        setDialogState(() {
                           selectedProduct = value;
                         });
                       },
@@ -1056,7 +1052,9 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                     if (selectedProduct != null) ...[
                       // Description (read-only)
                       TextField(
-                        controller: TextEditingController(text: selectedProduct?.description ?? ''),
+                        controller: TextEditingController(
+                          text: selectedProduct?.description ?? '',
+                        ),
                         decoration: InputDecoration(labelText: 'Description'),
                         readOnly: true,
                       ),
@@ -1068,13 +1066,19 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                       ),
                       // Price (read-only)
                       TextField(
-                        controller: TextEditingController(text: selectedProduct?.price?.toString() ?? '0'),
-                        decoration: InputDecoration(labelText: 'Price per Unit'),
+                        controller: TextEditingController(
+                          text: selectedProduct?.price?.toString() ?? '0',
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Price per Unit',
+                        ),
                         readOnly: true,
                       ),
                       // Tax (read-only)
                       TextField(
-                        controller: TextEditingController(text: selectedProduct?.taxRate?.toString() ?? '0'),
+                        controller: TextEditingController(
+                          text: selectedProduct?.taxRate?.toString() ?? '0',
+                        ),
                         decoration: InputDecoration(labelText: 'Tax (%)'),
                         readOnly: true,
                       ),
@@ -1088,24 +1092,29 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                   child: Text('Cancel'),
                 ),
                 TextButton(
-                  onPressed: selectedProduct == null ? null : () {
-                    final unit = double.tryParse(unitController.text) ?? 1;
-                    final price = selectedProduct?.price ?? 0;
-                    final amount = unit * price;
+                  onPressed: selectedProduct == null
+                      ? null
+                      : () {
+                          final unit =
+                              double.tryParse(unitController.text) ?? 1;
+                          final price = selectedProduct?.price ?? 0;
+                          final amount = unit * price;
 
-                    // Update the parent widget's state
-                    this.setState(() {
-                      items.add({
-                        'name': selectedProduct?.name ?? '',
-                        'description': selectedProduct?.description ?? '',
-                        'unit': unit.toString(),
-                        'price': price.toString(),
-                        'amount': amount.toStringAsFixed(2),
-                        'tax': selectedProduct?.taxRate?.toString() ?? '0',
-                      });
-                    });
-                    Navigator.pop(context);
-                  },
+                          // Update the parent widget's state
+                          setState(() {
+                            items.add({
+                              'name': selectedProduct?.name ?? '',
+                              'description':
+                                  selectedProduct?.description ?? '',
+                              'unit': unit.toString(),
+                              'price': price.toString(),
+                              'amount': amount.toStringAsFixed(2),
+                              'tax':
+                                  selectedProduct?.taxRate?.toString() ?? '0',
+                            });
+                          });
+                          Navigator.pop(context);
+                        },
                   child: Text('Add'),
                 ),
               ],
@@ -1140,5 +1149,23 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     setState(() {
       _advancePaid = double.tryParse(value) ?? 0.0;
     });
+  }
+
+  Future<void> _pickLogo() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      
+      if (image != null) {
+        setState(() {
+          _logoFile = File(image.path);
+        });
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick image: $e')),
+      );
+    }
   }
 }

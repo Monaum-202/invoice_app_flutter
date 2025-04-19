@@ -16,6 +16,7 @@ class _EditProductPageState extends State<EditProductPage> {
   final ProductService _productService = ProductService();
 
   late TextEditingController _nameController;
+  late TextEditingController _productCodeController;
   late TextEditingController _descriptionController;
   late TextEditingController _priceController;
   late TextEditingController _taxRateController;
@@ -24,6 +25,7 @@ class _EditProductPageState extends State<EditProductPage> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.product.name);
+    _productCodeController = TextEditingController(text: widget.product.productCode);
     _descriptionController = TextEditingController(text: widget.product.description);
     _priceController = TextEditingController(text: widget.product.price.toString());
     _taxRateController = TextEditingController(text: widget.product.taxRate.toString());
@@ -32,6 +34,7 @@ class _EditProductPageState extends State<EditProductPage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _productCodeController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
     _taxRateController.dispose();
@@ -74,6 +77,12 @@ class _EditProductPageState extends State<EditProductPage> {
                 controller: _nameController,
                 decoration: InputDecoration(labelText: 'Product Name'),
                 validator: (value) => value!.isEmpty ? 'Please enter a product name' : null,
+              ),
+              SizedBox(height: 12),
+              TextFormField(
+                controller: _productCodeController,
+                decoration: InputDecoration(labelText: 'Product Code'),
+                validator: (value) => value!.isEmpty ? 'Please enter a product code' : null,
               ),
               SizedBox(height: 12),
               TextFormField(

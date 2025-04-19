@@ -2,16 +2,17 @@
 
 class Product {
   int? id;
-  String? productCode;
+  
   String? name;
+  String? productCode;
   String? description;
   double? price;
   double? taxRate;
 
   Product({
     this.id,
-    this.productCode,
     this.name,
+    this.productCode,
     this.description,
     this.price,
     this.taxRate,
@@ -21,8 +22,8 @@ class Product {
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       id: json['id'],
-      productCode: json['productCode']?.toString(),
       name: json['name']?.toString(),
+      productCode: json['productCode']?.toString(),
       description: json['description']?.toString(),
       price: json['price'] != null ? double.parse(json['price'].toString()) : null,
       taxRate: json['taxRate'] != null ? double.parse(json['taxRate'].toString()) : null,
@@ -31,13 +32,16 @@ class Product {
 
   // Convert Product to JSON
   Map<String, dynamic> toJson() {
-    return {
-      "id": id,
-      "productCode": productCode,
+    final map = {
       "name": name,
+      "productCode": productCode,
       "description": description,
       "price": price,
       "taxRate": taxRate,
     };
+    if (id != null) {
+      map["id"] = id;
+    }
+    return map;
   }
 }
