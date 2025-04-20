@@ -1,13 +1,14 @@
-import 'dart:html' as html;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
+import 'dart:typed_data';
 import '../models/invoice_model.dart';
 import '../models/business_info.dart';
 
 class InvoicePdfGenerator {
-  static Future<void> generateInvoice(Invoice invoice, BusinessInfo businessInfo) async {
+  static Future<Uint8List> generateInvoice(Invoice invoice, BusinessInfo businessInfo) async {
     try {
       // Create PDF document
       final pdf = pw.Document();
@@ -33,25 +34,29 @@ class InvoicePdfGenerator {
       ),
     );
 
+    // Generate and return PDF bytes
     // Generate PDF bytes
-    final bytes = await pdf.save();
+    // final bytes = await pdf.save();
     
-    // Create the file name
-    final fileName = invoice.invoiceNumber?.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') ?? 'invoice';
+    // // Create the file name
+    // final fileName = invoice.invoiceNumber?.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') ?? 'invoice';
     
-    // Create the blob
-    final blob = html.Blob([bytes], 'application/pdf');
+    // // Create the blob
+    // final blob = html.Blob([bytes], 'application/pdf');
     
-    // Create a URL for the blob
-    final url = html.Url.createObjectUrlFromBlob(blob);
+    // // Create a URL for the blob
+    // final url = html.Url.createObjectUrlFromBlob(blob);
     
-    // Create an anchor element and trigger download
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute('download', '$fileName.pdf')
-      ..click();
+    // // Create an anchor element and trigger download
+    // final anchor = html.AnchorElement(href: url)
+    //   ..setAttribute('download', '$fileName.pdf')
+    //   ..click();
     
-    // Clean up by revoking the object URL
-    html.Url.revokeObjectUrl(url);
+    // // Clean up by revoking the object URL
+    // html.Url.revokeObjectUrl(url);
+
+
+    return pdf.save();
     } catch (e, stackTrace) {
       print('Error generating PDF: $e');
       print('Stack trace: $stackTrace');

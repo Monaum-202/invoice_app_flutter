@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:invo/new_invoice_screen.dart';
 import 'package:invo/services/InvoiceService.dart';
 import 'package:invo/services/BusinessInfoService.dart';
 import 'package:invo/services/AuthService.dart';
 import 'package:invo/services/invoice_print_pdf.dart' as pdf_generator;
+import 'package:invo/screens/pdf_viewer_screen.dart';
 import 'models/invoice_model.dart';
 import 'models/business_info.dart';
+
 
 class InvoiceListPage extends StatefulWidget {
   const InvoiceListPage({super.key});
@@ -212,13 +215,22 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text('Generating PDF...')));
 
-      await pdf_generator.InvoicePdfGenerator.generateInvoice(
+      final pdfBytes = await pdf_generator.InvoicePdfGenerator.generateInvoice(
         invoice,
         businessInfo,
       );
       ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('PDF downloaded successfully')),
+      
+      if (!mounted) return;
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfViewerScreen(
+            pdfBytes: pdfBytes,
+            title: 'Invoice ${invoice.invoiceNumber}',
+          ),
+        ),
       );
     } catch (e) {
       String errorMessage;
@@ -482,6 +494,26 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                                                   fontSize: 14,
                                                   color: Colors.redAccent,
                                                 ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.edit,
+                                                  color: Colors.blue,
+                                                ),
+                                                tooltip: 'Edit Invoice',
+                                                onPressed:
+                                                    () => Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        NewInvoiceScreen(
+                                                      invoice: invoice,
+                                                    ),
+                                                  ),
+                                                ).then((value) {
+                                                  _refreshList();
+                                                }),
                                               ),
                                               const SizedBox(height: 6),
                                               IconButton(

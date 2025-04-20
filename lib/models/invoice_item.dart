@@ -1,6 +1,7 @@
 class InvoiceItem {
   int? id;
   String itemName;
+  String? description;
   int quantity;
   double unitPrice;
   double totalPrice;
@@ -10,6 +11,7 @@ class InvoiceItem {
   InvoiceItem({
     this.id,
     required this.itemName,
+    this.description,
     required this.quantity,
     required this.unitPrice,
     required this.totalPrice,
@@ -21,6 +23,7 @@ class InvoiceItem {
     return InvoiceItem(
       id: json['id'],
       itemName: json['itemName'],
+      description: json['description'],
       quantity: json['quantity'],
       unitPrice: json['unitPrice'],
       totalPrice: json['totalPrice'],
@@ -32,6 +35,7 @@ class InvoiceItem {
   Map<String, dynamic> toJson() => {
         'id': id,
         'itemName': itemName,
+        'description': description,
         'quantity': quantity,
         'unitPrice': unitPrice,
         'totalPrice': totalPrice,
