@@ -1,81 +1,79 @@
 import 'package:flutter/material.dart';
 import 'package:invo/business_info_edit.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'services/BusinessInfoService.dart';
+import 'models/business_info.dart';
+import 'login_screen.dart';
 
-class MoreScreen extends StatelessWidget {
+class MoreScreen extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("More"),
-        centerTitle: true,
-      ),
-      body: ListView(
-        children: [
-          _buildSection([
-            _buildTile(
-              icon: Icons.storefront,
-              title: "New Business",
-              subtitle: "Add Your Business Details",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => BusinessInfoScreen()),
-                );
-              },
-            ),
-            _buildTile(
-              icon: Icons.dashboard,
-              title: "Dashboard",
-              onTap: () {},
-            ),
-            _buildTile(
-              icon: Icons.bar_chart,
-              title: "Report",
-              onTap: () {},
-            ),
-            _buildTile(
-              icon: Icons.file_download,
-              title: "Export",
-              onTap: () {},
-            ),
-            _buildTile(
-              icon: Icons.settings,
-              title: "Settings",
-              onTap: () {},
-            ),
-          ]),
-          const SizedBox(height: 10),
-          _buildSection([
-            _buildTile(
-              icon: Icons.backup,
-              title: "Backup & Restore",
-              subtitle: "Backup your data regularly as a safety measure",
-              onTap: () {},
-            ),
-            _buildTile(
-              icon: Icons.share,
-              title: "Share this App",
-              onTap: () {},
-            ),
-            _buildTile(
-              icon: Icons.support,
-              title: "Support",
-              onTap: () {},
-            ),
-            _buildTile(
-              icon: Icons.star_rate,
-              title: "Rate Us",
-              onTap: () {},
-            ),
-            _buildTile(
-              icon: Icons.info,
-              title: "About Us",
-              onTap: () {},
-            ),
-          ]),
-        ],
-      ),
-    );
+  _MoreScreenState createState() => _MoreScreenState();
+}
+
+class _MoreScreenState extends State<MoreScreen> {
+  BusinessInfo? _businessInfo;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBusinessInfo();
+  }
+
+  Future<void> _loadBusinessInfo() async {
+    setState(() => _isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('user');
+
+      if (userJson != null) {
+        final userData = jsonDecode(userJson);
+        final service = BusinessInfoService();
+
+        final business = await service.getBusinessInfoByUser(
+          userData['userName'],
+        );
+        if (mounted) {
+          setState(() {
+            _businessInfo = business;
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading business info: ${e.toString()}'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _logout() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user');
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => LoginPage()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error during logout: ${e.toString()}'))
+        );
+      }
+    }
   }
 
   Widget _buildSection(List<Widget> tiles) {
@@ -98,6 +96,93 @@ class MoreScreen extends StatelessWidget {
       subtitle: subtitle != null ? Text(subtitle) : null,
       trailing: Icon(Icons.arrow_forward_ios, size: 16),
       onTap: onTap,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("More"), centerTitle: true),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : ListView(
+              children: [
+                _buildSection([
+                  _buildTile(
+                    icon: Icons.storefront,
+                    title: _businessInfo != null ? "My Business" : "New Business",
+                    subtitle: _businessInfo != null
+                        ? _businessInfo!.businessName
+                        : "Add Your Business Details",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BusinessInfoScreen(),
+                        ),
+                      ).then((_) => _loadBusinessInfo());
+                    },
+                  ),
+                  _buildTile(
+                    icon: Icons.dashboard,
+                    title: "Dashboard",
+                    onTap: () {},
+                  ),
+                  _buildTile(
+                    icon: Icons.bar_chart,
+                    title: "Report",
+                    onTap: () {},
+                  ),
+                  _buildTile(
+                    icon: Icons.file_download,
+                    title: "Export",
+                    onTap: () {},
+                  ),
+                  _buildTile(
+                    icon: Icons.settings,
+                    title: "Settings",
+                    onTap: () {},
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                _buildSection([
+                  _buildTile(
+                    icon: Icons.backup,
+                    title: "Backup & Restore",
+                    subtitle: "Backup your data regularly as a safety measure",
+                    onTap: () {},
+                  ),
+                  _buildTile(
+                    icon: Icons.share,
+                    title: "Share this App",
+                    onTap: () {},
+                  ),
+                  _buildTile(
+                    icon: Icons.support,
+                    title: "Support",
+                    onTap: () {},
+                  ),
+                  _buildTile(
+                    icon: Icons.star_rate,
+                    title: "Rate Us",
+                    onTap: () {},
+                  ),
+                  _buildTile(
+                    icon: Icons.info,
+                    title: "About Us",
+                    onTap: () {},
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                _buildSection([
+                  _buildTile(
+                    icon: Icons.logout,
+                    title: "Logout",
+                    onTap: _logout,
+                  ),
+                ]),
+              ],
+            ),
     );
   }
 }

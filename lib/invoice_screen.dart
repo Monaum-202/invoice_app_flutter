@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:invo/new_invoice_screen.dart';
 import 'package:invo/services/InvoiceService.dart';
-
+import 'package:invo/services/BusinessInfoService.dart';
+import 'package:invo/services/AuthService.dart';
+import 'package:invo/services/invoice_print_pdf.dart' as pdf_generator;
 import 'models/invoice_model.dart';
+import 'models/business_info.dart';
 
 class InvoiceListPage extends StatefulWidget {
   const InvoiceListPage({super.key});
@@ -30,7 +33,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     _loadInvoices();
   }
 
-  Future<void> _loadInvoices() async {
+  Future<void> _fetchInvoices({bool isRefresh = false}) async {
     setState(() {
       _isLoading = true;
     });
@@ -68,15 +71,28 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
         _filteredInvoiceList = _invoiceList;
       });
     } catch (e) {
-      print('Error loading invoices: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading invoices: $e')),
-      );
-      setState(() {
-        _invoiceList = [];
-        _filteredInvoiceList = [];
-        _totalPages = 1;
-      });
+      String errorMessage;
+      if (e.toString().contains('connection')) {
+        errorMessage = 'Network error. Please check your connection.';
+      } else if (e.toString().contains('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      } else {
+        errorMessage =
+            isRefresh ? 'Error refreshing invoices' : 'Error loading invoices';
+      }
+
+      print('$errorMessage: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+
+      if (!isRefresh) {
+        setState(() {
+          _invoiceList = [];
+          _filteredInvoiceList = [];
+          _totalPages = 1;
+        });
+      }
     } finally {
       setState(() {
         _isLoading = false;
@@ -84,52 +100,8 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     }
   }
 
-  Future<void> _refreshList() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      Map<String, dynamic> response;
-
-      switch (_selectedFilter) {
-        case 'Paid':
-          response = await _invoiceService.getPaidInvoices(
-            page: _currentPage,
-            direction: 'desc',
-          );
-          break;
-        case 'Unpaid':
-          response = await _invoiceService.getUnpaidInvoices(
-            page: _currentPage,
-            direction: 'desc',
-          );
-          break;
-        case 'Overdue':
-          response = await _invoiceService.getOverDueInvoices(
-            page: _currentPage,
-            direction: 'desc',
-          );
-          break;
-        default:
-          response = await _invoiceService.getAll(page: _currentPage);
-      }
-
-      setState(() {
-        _invoiceList = response['invoices'];
-        _totalPages = response['totalPages'];
-        _filteredInvoiceList = _invoiceList;
-        _isLoading = false;
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error refreshing invoices: $e')),
-      );
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
+  Future<void> _loadInvoices() => _fetchInvoices(isRefresh: false);
+  Future<void> _refreshList() => _fetchInvoices(isRefresh: true);
 
   void _applyFilter() {
     _loadInvoices();
@@ -224,6 +196,48 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     return now.difference(dueDate).inDays;
   }
 
+  Future<void> _generateAndOpenInvoicePdf(Invoice invoice) async {
+    setState(() => _isLoading = true);
+    try {
+      final authService = AuthService();
+      final username = await authService.getUsername();
+      if (username == null) {
+        throw Exception('You must be logged in to generate invoices');
+      }
+
+      final businessService = BusinessInfoService();
+      final businessInfo = await businessService.getBusinessInfoByUser(username);
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Generating PDF...')));
+
+      await pdf_generator.InvoicePdfGenerator.generateInvoice(
+        invoice,
+        businessInfo,
+      );
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PDF downloaded successfully')),
+      );
+    } catch (e) {
+      String errorMessage;
+      if (e.toString().contains('permission')) {
+        errorMessage = 'Permission denied to create or open PDF';
+      } else if (e.toString().contains('storage')) {
+        errorMessage = 'Not enough storage space to create PDF';
+      } else {
+        errorMessage = 'Error generating PDF. Please try again.';
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -269,193 +283,234 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
             ),
           ),
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredInvoiceList.isEmpty
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _filteredInvoiceList.isEmpty
                     ? const Center(child: Text('No invoices found'))
                     : RefreshIndicator(
-                        onRefresh: _refreshList,
-                        child: ListView.builder(
-                          itemCount: _filteredInvoiceList.length,
-                          itemBuilder: (context, index) {
-                            final invoice = _filteredInvoiceList[index];
-                            return Card(
-                              elevation: 4,
-                              margin: const EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 16,
+                      onRefresh: _refreshList,
+                      child: ListView.builder(
+                        itemCount: _filteredInvoiceList.length,
+                        itemBuilder: (context, index) {
+                          final invoice = _filteredInvoiceList[index];
+                          return Dismissible(
+                            key: Key(invoice.id.toString()),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              color: Colors.redAccent,
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 16),
+                              child: const Icon(
+                                Icons.delete,
+                                color: Colors.white,
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              color: Colors.white,
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              invoice.invoiceNumber ?? 'No Invoice #',
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Theme.of(context).primaryColorDark,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.calendar_today,
-                                                  size: 14,
-                                                  color: Colors.grey[700],
-                                                ),
-                                                const SizedBox(width: 6),
-                                                Text(
-                                                  'Issue Date: ${invoice.issueDate != null ? DateFormat('dd/MMM/yyyy').format(invoice.issueDate!) : 'N/A'}',
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.green,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: invoice.status == 'PAID'
-                                                ? Colors.green.shade100
-                                                : Colors.orange.shade100,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(
-                                            invoice.status ?? 'N/A',
-                                            style: TextStyle(
-                                              color: invoice.status == 'PAID'
-                                                  ? Colors.green.shade800
-                                                  : Colors.orange.shade800,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Dismissible(
-                                      key: Key(invoice.id.toString()),
-                                      direction: DismissDirection.endToStart,
-                                      background: Container(
-                                        color: Colors.redAccent,
-                                        alignment: Alignment.centerRight,
-                                        child: const Icon(
-                                          Icons.delete,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      onDismissed: (direction) => _deleteInvoice(invoice.id!),
-                                      child: Card(
-                                        elevation: 4,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(16.0),
-                                          child: Column(
+                            ),
+                            onDismissed:
+                                (direction) => _deleteInvoice(invoice.id!),
+                            child: InkWell(
+                              onTap:
+                                  () => _generateAndOpenInvoicePdf(
+                                    invoice,
+                                  ), // PDF logic
+                              child: Card(
+                                elevation: 4,
+                                margin: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                  horizontal: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Top Row: Invoice number and status
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
+                                              Text(
+                                                invoice.invoiceNumber ??
+                                                    'No Invoice #',
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      Theme.of(
+                                                        context,
+                                                      ).primaryColorDark,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
                                               Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                 children: [
-                                                  // Left side (Client and Business)
-                                                  Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        invoice.client?.name ?? 'Client: N/A',
-                                                        style: const TextStyle(
-                                                          fontSize: 16,
-                                                          fontWeight: FontWeight.w600,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        invoice.companyName ?? 'Company: N/A',
-                                                        style: const TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.grey,
-                                                        ),
-                                                      ),
-                                                      if (invoice.status != 'PAID')
-                                                        Text(
-                                                          'Due Date: ${invoice.dueDate != null ? DateFormat('dd/MMM/yyyy').format(invoice.dueDate!) : 'N/A'}',
-                                                          style: const TextStyle(
-                                                            fontSize: 14,
-                                                            color: Colors.redAccent,
-                                                          ),
-                                                        ),
-                                                      if (invoice.status != 'PAID' &&
-                                                          invoice.dueDate != null &&
-                                                          _calculateOverdueDays(invoice.dueDate) > 0)
-                                                        Text(
-                                                          'Overdue - ${_calculateOverdueDays(invoice.dueDate)} days',
-                                                          style: const TextStyle(
-                                                            fontSize: 14,
-                                                            color: Colors.red,
-                                                            fontWeight: FontWeight.bold,
-                                                            decoration: TextDecoration.underline,
-                                                          ),
-                                                        ),
-                                                    ],
+                                                  Icon(
+                                                    Icons.calendar_today,
+                                                    size: 14,
+                                                    color: Colors.grey[700],
                                                   ),
-                                                  // Right side (Amount details)
-                                                  Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                                    children: [
-                                                      Text(
-                                                        '৳${(invoice.totalAmount ?? 0.0).toStringAsFixed(2)}',
-                                                        style: const TextStyle(
-                                                          fontSize: 18,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                      Text(
-                                                        'Paid: ৳${(invoice.paidAmount ?? 0.0).toStringAsFixed(2)}',
-                                                        style: const TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.green,
-                                                        ),
-                                                      ),
-                                                      Text(
-                                                        'Due: ৳${(invoice.dueAmount ?? 0.0).toStringAsFixed(2)}',
-                                                        style: const TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.redAccent,
-                                                        ),
-                                                      ),
-                                                    ],
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    'Issue Date: ${invoice.issueDate != null ? DateFormat('dd/MMM/yyyy').format(invoice.issueDate!) : 'N/A'}',
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.green,
+                                                    ),
                                                   ),
                                                 ],
                                               ),
                                             ],
                                           ),
-                                        ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  invoice.status == 'PAID'
+                                                      ? Colors.green.shade100
+                                                      : Colors.orange.shade100,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              invoice.status ?? 'N/A',
+                                              style: TextStyle(
+                                                color:
+                                                    invoice.status == 'PAID'
+                                                        ? Colors.green.shade800
+                                                        : Colors
+                                                            .orange
+                                                            .shade800,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ],
+
+                                      const Divider(height: 16),
+
+                                      // Bottom Row: Client, Company, Dates and Amounts
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          // Left section
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                invoice.client?.name ??
+                                                    'Client: N/A',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                invoice.companyName ??
+                                                    'Company: N/A',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                              if (invoice.status != 'PAID') ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'Due Date: ${invoice.dueDate != null ? DateFormat('dd/MMM/yyyy').format(invoice.dueDate!) : 'N/A'}',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.redAccent,
+                                                  ),
+                                                ),
+                                              ],
+                                              if (invoice.status != 'PAID' &&
+                                                  invoice.dueDate != null &&
+                                                  _calculateOverdueDays(
+                                                        invoice.dueDate,
+                                                      ) >
+                                                      0)
+                                                Text(
+                                                  'Overdue - ${_calculateOverdueDays(invoice.dueDate)} days',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.red,
+                                                    fontWeight: FontWeight.bold,
+                                                    decoration:
+                                                        TextDecoration
+                                                            .underline,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                          // Right section
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
+                                            children: [
+                                              Text(
+                                                '৳${(invoice.totalAmount ?? 0.0).toStringAsFixed(2)}',
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                              Text(
+                                                'Paid: ৳${(invoice.paidAmount ?? 0.0).toStringAsFixed(2)}',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.green,
+                                                ),
+                                              ),
+                                              Text(
+                                                'Due: ৳${(invoice.dueAmount ?? 0.0).toStringAsFixed(2)}',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.redAccent,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.picture_as_pdf,
+                                                  color: Colors.deepPurple,
+                                                ),
+                                                tooltip: 'Download PDF',
+                                                onPressed:
+                                                    () =>
+                                                        _generateAndOpenInvoicePdf(
+                                                          invoice,
+                                                        ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
+                    ),
           ),
+
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -469,7 +524,8 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                 ..._buildPaginationButtons(),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: _currentPage < _totalPages - 1 ? _goToNextPage : null,
+                  onPressed:
+                      _currentPage < _totalPages - 1 ? _goToNextPage : null,
                   child: const Text('Next'),
                 ),
               ],
