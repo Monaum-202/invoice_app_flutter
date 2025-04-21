@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:invo/client_screen.dart';
 import 'package:invo/invoice_screen.dart';
 import 'package:invo/more_screen.dart';
 import 'package:invo/new_invoice_screen.dart';
@@ -18,7 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     InvoiceListPage(),
     Center(child: Text("Estimates Screen")),
-    Center(child: Text("Clients Screen")),
+    ClientListPage(),
     ProductListPage(),
     MoreScreen(),
   ];

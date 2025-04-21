@@ -1,25 +1,74 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:invo/models/invoice_model.dart';
+import 'package:invo/services/AuthService.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class InvoiceService {
   static const String baseUrl = "http://localhost:9090/api/invoices";
 
   Future<Invoice> createInvoice(Invoice invoice) async {
     try {
+      // Get token from shared preferences directly since that's where login saves it
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
+
+      // Get username from token for createdBy field
+      final authService = AuthService();
+      final username = await authService.getUsernameFromToken(token);
+      
+      if (username == null || username.isEmpty) {
+        throw Exception('Could not get username from token');
+      }
+      
+      print('Setting createdBy fields...');
+      print('Username from token: $username');
+      
+      // Create a separate client object first
+      Map<String, dynamic>? clientData;
+      if (invoice.client != null) {
+        clientData = {
+          ...invoice.client!.toJson(),
+          'createdBy': username,  // Explicitly set createdBy for client
+        };
+        print('Client data prepared: $clientData');
+      }
+
+      // Create the request body
+      final Map<String, dynamic> requestBody = {
+        ...invoice.toJson(),
+        'createdBy': username,  // Set for invoice
+        if (clientData != null) 'client': clientData,  // Use our prepared client data
+      };
+      
+      print('Full request body being sent: ${jsonEncode(requestBody)}');
 
       final response = await http.post(
         Uri.parse(baseUrl),
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
+          "Authorization": "Bearer $token",
         },
-        body: jsonEncode(invoice.toJson()),
+        body: jsonEncode(requestBody),
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        print("Response data: $responseData");
+        
+        // Ensure client data has createdBy
+        if (responseData['client'] != null) {
+          // If server didn't set createdBy, set it here
+          if (responseData['client']['createdBy'] == null) {
+            responseData['client']['createdBy'] = username;
+          }
+        }
+        
+        print("Final response data with client: ${jsonEncode(responseData)}");
         return Invoice.fromJson(responseData);
       } else {
         throw Exception(

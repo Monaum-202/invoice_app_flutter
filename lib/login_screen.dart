@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:invo/bottomNav.dart';
+import 'package:invo/signup_screen.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,8 +16,15 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
     final url = Uri.parse('http://localhost:9090/api/auth/signin'); // <-- Set your API URL here
@@ -32,18 +40,31 @@ class _LoginPageState extends State<LoginPage> {
 
       
       final data = jsonDecode(response.body);
-
       
       if (response.statusCode == 200 && data['jwtToken'] != null) {
         final prefs = await SharedPreferences.getInstance();
+        
+        // Save token
         await prefs.setString('jwt_token', data['jwtToken'] ?? '');
+        
+        // Save username
+        await prefs.setString('username', username);
+        
+        // Save user data with username
         if (data['user'] != null) {
-          final userJson = jsonEncode(data['user']);
+          final Map<String, dynamic> userData = Map<String, dynamic>.from(data['user']);
+          // Ensure username is in the user data
+          userData['userName'] = username;
+          final userJson = jsonEncode(userData);
           print('Saving user data to SharedPreferences: $userJson');
           await prefs.setString('user', userJson);
         } else {
-          print('Warning: User data is null in the response');
+          // If no user data, create minimal user data with username
+          final userData = {'userName': username};
+          await prefs.setString('user', jsonEncode(userData));
+          print('Saving minimal user data with username');
         }
+        
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => HomeScreen(initialIndex: 0)), // Navigate to Invoices tab
@@ -54,10 +75,16 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } catch (e) {
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -154,15 +181,16 @@ class _LoginPageState extends State<LoginPage> {
 
                     // Login button
                     ElevatedButton(
-                      onPressed: () async {
-                        if (_formKey.currentState?.validate() ?? false) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Logging in...')),
-                          );
-                          await _login();
-                        }
-                      },
-                      child: Text('Login'),
+                      onPressed: _isLoading ? null : _login,
+                      child: _isLoading
+                          ? SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Text('Login'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo, // Button color
                         padding: EdgeInsets.symmetric(vertical: 16.0),
@@ -174,19 +202,27 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     SizedBox(height: 16.0),
 
-                    // Forgot password link
-                    GestureDetector(
-                      onTap: () {
-                        // Handle forgot password
-                        print('Forgot Password tapped!');
-                      },
-                      child: Text(
-                        'Forgot Password?',
-                        style: TextStyle(
-                          color: Colors.indigo[700],
-                          fontWeight: FontWeight.w500,
+                    // Sign up link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Don\'t have an account? '),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const SignupPage()),
+                            );
+                          },
+                          child: Text(
+                            'Sign Up',
+                            style: TextStyle(
+                              color: Colors.indigo[700],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),

@@ -5,14 +5,16 @@ class Client {
   String? phone;
   String? nid;
   String? address;
+  String? createdBy;
 
   Client({
     this.id,
-     this.name,
-     this.email,
-     this.phone,
-     this.nid,
-     this.address,
+    this.name,
+    this.email,
+    this.phone,
+    this.nid,
+    this.address,
+    this.createdBy, // Make createdBy required
   });
 
   factory Client.fromJson(Map<String, dynamic> json) {
@@ -23,15 +25,17 @@ class Client {
       phone: json['phone'],
       nid: json['nid'],
       address: json['address'],
+      createdBy: json['createdBy'],
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'email': email,
-        'phone': phone,
-        'nid': nid,
-        'address': address,
-      };
+    'id': id,
+    'name': name,
+    'email': email,
+    'phone': phone,
+    'nid': nid,
+    'address': address,
+    'createdBy': createdBy,
+  };
 }
