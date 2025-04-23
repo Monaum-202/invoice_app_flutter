@@ -174,4 +174,81 @@ Future<Map<String, dynamic>> getClientsByUser(String username, int page, int siz
       throw Exception("Error: $e");
     }
   }
+
+
+
+
+
+
+  Future<double> getTotalAmount(int clientId) async {
+    final token = await _getAuthToken();
+    final url = Uri.parse('$baseUrl/total-amount/$clientId');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return double.parse(response.body);
+      } else {
+        throw Exception('Failed to load total amount: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to fetch total amount: $e');
+    }
+  }
+
+  Future<double> getTotalPaidAmount(int clientId) async {
+  final token = await _getAuthToken();
+  final url = Uri.parse('$baseUrl/total-paid/$clientId');
+
+  try {
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return double.parse(response.body);
+    } else {
+      throw Exception('Failed to load total paid: ${response.statusCode}');
+    }
+  } catch (e) {
+    throw Exception('Failed to fetch total paid: $e');
+  }
 }
+
+
+Future<double> getTotalDueAmount(int clientId) async {
+  final token = await _getAuthToken();
+  final url = Uri.parse('$baseUrl/total-due/$clientId');
+
+  try {
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return double.parse(response.body);
+    } else {
+      throw Exception('Failed to load total due: ${response.statusCode}');
+    }
+  } catch (e) {
+    throw Exception('Failed to fetch total due: $e');
+  }
+}
+
+}
+

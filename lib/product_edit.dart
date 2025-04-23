@@ -41,27 +41,27 @@ class _EditProductPageState extends State<EditProductPage> {
     super.dispose();
   }
 
-  void _saveProduct() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        Product updatedProduct = Product(
-          id: widget.product.id,
-          productCode: widget.product.productCode,
-          name: _nameController.text.trim(),
-          description: _descriptionController.text.trim(),
-          price: double.parse(_priceController.text),
-          taxRate: double.parse(_taxRateController.text),
-        );
+void _saveProduct() async {
+  if (_formKey.currentState!.validate()) {
+    try {
+      Product newProduct = Product(
+        name: _nameController.text.trim(),
+        productCode: _productCodeController.text.trim(),
+        description: _descriptionController.text.trim(),
+        price: double.tryParse(_priceController.text) ?? 0.0,
+        taxRate: double.tryParse(_taxRateController.text) ?? 0.0,
+      );
 
-        final result = await _productService.updateProduct(updatedProduct);
-        Navigator.pop(context, result);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating product: $e')),
-        );
-      }
+      final result = await _productService.createProduct(newProduct);
+      Navigator.pop(context, result); // Navigate back with the created product
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error creating product: $e')),
+      );
     }
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'services/BusinessInfoService.dart';
 import 'models/business_info.dart';
 import 'login_screen.dart';
+import 'screens/dashboard_screen.dart';
 
 class MoreScreen extends StatefulWidget {
   @override
@@ -126,7 +127,14 @@ class _MoreScreenState extends State<MoreScreen> {
                   _buildTile(
                     icon: Icons.dashboard,
                     title: "Dashboard",
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DashboardScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _buildTile(
                     icon: Icons.bar_chart,

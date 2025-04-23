@@ -82,23 +82,39 @@ class ProductService {
   }
 
   // POST: Create a new product
-  Future<Product> createProduct(Product product) async {
-    try {
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(product.toJson()),
-      );
+Future<Product> createProduct(Product product) async {
+  try {
+    // Create a copy of the product without the ID for creation
+    final productWithoutId = Product(
+      name: product.name,
+      productCode: product.productCode,
+      description: product.description,
+      price: product.price,
+      taxRate: product.taxRate,
+    );
 
-      if (response.statusCode == 201) {
-        return Product.fromJson(jsonDecode(response.body));
-      } else {
-        throw Exception("Failed to create product");
-      }
-    } catch (e) {
-      throw Exception("Error: $e");
+    final response = await http.post(
+      Uri.parse(baseUrl),
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: jsonEncode(productWithoutId.toJson()), // Use the toJson method to send the product as JSON
+    );
+
+    if (response.statusCode == 201) {
+      final responseData = jsonDecode(response.body);
+      print('Create product response: $responseData'); // Debug log
+      return Product.fromJson(responseData); // Successfully created product
+    } else {
+      print('Failed to create product: ${response.statusCode} - ${response.body}'); // Debug log
+      throw Exception("Failed to create product: ${response.statusCode}");
     }
+  } catch (e) {
+    print('Error creating product: $e'); // Debug log
+    throw Exception("Error creating product: $e");
   }
+}
 
   // PUT: Update product
   Future<Product> updateProduct(Product product) async {

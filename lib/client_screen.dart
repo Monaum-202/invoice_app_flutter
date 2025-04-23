@@ -198,6 +198,14 @@ class _ClientListPageState extends State<ClientListPage> {
                                         ),
                                       ),
                                       child: ListTile(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ClientDashboardPage(client: client),
+                                            ),
+                                          );
+                                        },
                                         contentPadding:
                                             const EdgeInsets.symmetric(
                                               vertical: 8,
@@ -313,4 +321,152 @@ class _ClientListPageState extends State<ClientListPage> {
       ),
     );
   }
+}
+
+class ClientDashboardPage extends StatefulWidget {
+  final Client client;
+
+  const ClientDashboardPage({Key? key, required this.client}) : super(key: key);
+
+  @override
+  State<ClientDashboardPage> createState() => _ClientDashboardPageState();
+}
+
+class _ClientDashboardPageState extends State<ClientDashboardPage> {
+  final ClientService _clientService = ClientService();
+
+  double _totalAmount = 0.0;
+  double _totalDueAmount = 0.0;
+  double _totalPaidAmount = 0.0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTotalAmount();
+  }
+
+  Future<void> _loadTotalAmount() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final futures = await Future.wait([
+        _clientService.getTotalAmount(widget.client.id!),
+        _clientService.getTotalDueAmount(widget.client.id!),
+        _clientService.getTotalPaidAmount(widget.client.id!),
+      ]);
+      
+      setState(() {
+        _totalAmount = futures[0];
+        _totalDueAmount = futures[1];
+        _totalPaidAmount = futures[2];
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading amounts: $e')),
+      );
+    }
+  }
+
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.client.name ?? 'Unknown Client', style: TextStyle(fontSize: 16)),
+          Text('Dashboard', style: TextStyle(fontSize: 10)),
+        ],
+      ),
+      actions: [IconButton(icon: Icon(Icons.more_vert), onPressed: () {})],
+    ),
+    body: SafeArea(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            children: [
+              GridView.count(
+                physics: NeverScrollableScrollPhysics(), // disable GridView's own scroll
+                shrinkWrap: true, // let GridView size itself based on content
+                crossAxisCount: 2,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 1.3,
+                children: [
+                  _buildStatCard(
+                    "Total Due",
+                    _isLoading ? "Loading..." : "৳${_totalDueAmount.toStringAsFixed(2)}",
+                    "Unpaid amount",
+                    color: Colors.red,
+                  ),
+                  _buildStatCard(
+                    "Total Balance",
+                    _isLoading ? "Loading..." : "৳${_totalPaidAmount.toStringAsFixed(2)}",
+                    "Paid amount",
+                  ),
+                  _buildStatCard(
+                    "Total Amount",
+                    _isLoading ? "Loading..." : "৳${_totalAmount.toStringAsFixed(2)}",
+                    "Total invoice amount",
+                  ),
+                  // _buildStatCard("Total Sales", "৳3,000.00", "1 Invoice issued"),
+                ],
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: Size(double.infinity, 45),
+                  backgroundColor: Colors.green,
+                ),
+                onPressed: () {
+                  // Export logic here
+                },
+                child: Text("Export Statement", style: TextStyle(fontSize: 14)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildStatCard(String title, String value, String subtitle, {Color color = Colors.black}) {
+  return Container(
+    padding: EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        SizedBox(height: 6),
+        Text(
+          value,
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
+        SizedBox(height: 4),
+        Text(subtitle, style: TextStyle(fontSize: 10, color: Colors.grey[700])),
+      ],
+    ),
+  );
+}
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
 }

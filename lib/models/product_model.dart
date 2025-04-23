@@ -2,7 +2,6 @@
 
 class Product {
   int? id;
-  
   String? name;
   String? productCode;
   String? description;
@@ -21,27 +20,28 @@ class Product {
   // Factory method to create a Product from JSON
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'],
-      name: json['name']?.toString(),
-      productCode: json['productCode']?.toString(),
-      description: json['description']?.toString(),
-      price: json['price'] != null ? double.parse(json['price'].toString()) : null,
-      taxRate: json['taxRate'] != null ? double.parse(json['taxRate'].toString()) : null,
+      id: json['id'] is String ? int.tryParse(json['id']) ?? 0 : json['id'] ?? 0,
+      name: json['name']?.toString() ?? '',
+      productCode: json['productCode']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      price: json['price'] is String 
+          ? double.tryParse(json['price']) ?? 0.0
+          : (json['price']?.toDouble() ?? 0.0),
+      taxRate: json['taxRate'] is String 
+          ? double.tryParse(json['taxRate']) ?? 0.0
+          : (json['taxRate']?.toDouble() ?? 0.0),
     );
   }
 
   // Convert Product to JSON
   Map<String, dynamic> toJson() {
-    final map = {
-      "name": name,
-      "productCode": productCode,
-      "description": description,
-      "price": price,
-      "taxRate": taxRate,
+    return {
+      'id': id?.toString() ?? '0',  // Convert to String to avoid type issues
+      'name': name ?? '',
+      'productCode': productCode ?? '',
+      'description': description ?? '',
+      'price': price?.toString() ?? '0.0',
+      'taxRate': taxRate?.toString() ?? '0.0'
     };
-    if (id != null) {
-      map["id"] = id;
-    }
-    return map;
   }
 }
