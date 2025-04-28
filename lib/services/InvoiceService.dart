@@ -248,16 +248,37 @@ Future<Map<String, dynamic>> searchInvoices(String invoiceNumber) async {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      print('Invoices: ${data['content']}');
+      print('Raw search response: $data');
+      
+      if (data['content'] == null) {
+        print('No content found in search response');
+        return {
+          'invoices': <Invoice>[],
+          'totalPages': 0,
+          'currentPage': 0,
+        };
+      }
+
+      List<dynamic> contentList = data['content'] as List<dynamic>;
+      List<Invoice> invoices = contentList
+          .map((invoiceJson) {
+            print('Converting invoice JSON: $invoiceJson');
+            return Invoice.fromJson(invoiceJson as Map<String, dynamic>);
+          })
+          .toList();
+      
+      print('Converted ${invoices.length} invoices');
       return {
-        'invoices': data['content'],
-        'totalPages': data['totalPages'],
-        'currentPage': data['number'],
+        'invoices': invoices,
+        'totalPages': data['totalPages'] ?? 1,
+        'currentPage': data['number'] ?? 0,
       };
     } else {
-      throw Exception('Failed to search invoices');
+      print('Search failed with status ${response.statusCode}: ${response.body}');
+      throw Exception('Failed to search invoices: ${response.statusCode} - ${response.body}');
     }
-  } catch (e) {
+  } catch (e, stackTrace) {
+    print('Search error: $e\n$stackTrace');
     throw Exception('Exception during invoice search: $e');
   }
 }
