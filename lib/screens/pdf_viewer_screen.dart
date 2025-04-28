@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 import 'dart:io' as io;
+import 'package:flutter/foundation.dart';
 import 'dart:ui' as ui;
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
@@ -52,8 +54,9 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
   Widget _buildWebPdfView() {
     final viewType = 'pdf-view-${DateTime.now().millisecondsSinceEpoch}';
-    // ignore: undefined_prefixed_name
-    ui.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
+    if (kIsWeb) {
+      // ignore: undefined_prefixed_name
+      ui.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
       final iframe = html.IFrameElement()
         ..style.width = '100%'
         ..style.height = '100%'
@@ -61,6 +64,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         ..src = _pdfPath!;
       return iframe;
     });
+    }
 
     return HtmlElementView(viewType: viewType);
   }

@@ -236,4 +236,31 @@ class InvoiceService {
       throw Exception('Failed to load overdue invoices: ${response.statusCode} - ${response.body}');
     }
   }
+
+
+Future<Map<String, dynamic>> searchInvoices(String invoiceNumber) async {
+  try {
+    final uri = Uri.parse(
+      '$baseUrl/search?invoiceNumber=$invoiceNumber&page=0&size=10',
+    );
+
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      print('Invoices: ${data['content']}');
+      return {
+        'invoices': data['content'],
+        'totalPages': data['totalPages'],
+        'currentPage': data['number'],
+      };
+    } else {
+      throw Exception('Failed to search invoices');
+    }
+  } catch (e) {
+    throw Exception('Exception during invoice search: $e');
+  }
+}
+
+
 }

@@ -10,7 +10,6 @@ import 'package:invo/screens/pdf_viewer_screen.dart';
 import 'models/invoice_model.dart';
 import 'models/business_info.dart';
 
-
 class InvoiceListPage extends StatefulWidget {
   const InvoiceListPage({super.key});
 
@@ -209,7 +208,9 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
       }
 
       final businessService = BusinessInfoService();
-      final businessInfo = await businessService.getBusinessInfoByUser(username);
+      final businessInfo = await businessService.getBusinessInfoByUser(
+        username,
+      );
 
       ScaffoldMessenger.of(
         context,
@@ -220,16 +221,17 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
         businessInfo,
       );
       ScaffoldMessenger.of(context).clearSnackBars();
-      
+
       if (!mounted) return;
-      
+
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PdfViewerScreen(
-            pdfBytes: pdfBytes,
-            title: 'Invoice ${invoice.invoiceNumber}',
-          ),
+          builder:
+              (context) => PdfViewerScreen(
+                pdfBytes: pdfBytes,
+                title: 'Invoice ${invoice.invoiceNumber}',
+              ),
         ),
       );
     } catch (e) {
@@ -250,27 +252,54 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Invoices'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              // TODO: Implement search logic
-              print('Search tapped');
-            },
+TextEditingController _searchController = TextEditingController();
+
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Search Invoice...',
+            prefixIcon: IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () async {
+                String searchQuery = _searchController.text.trim();
+                if (searchQuery.isNotEmpty) {
+                  setState(() {
+                    _isLoading = true;
+                  });
+                  try {
+                    final response = await _invoiceService.searchInvoices(searchQuery);
+                    setState(() {
+                      _filteredInvoiceList = response['invoices'] ?? [];
+                      _totalPages = response['totalPages'] ?? 1;
+                      _currentPage = response['currentPage'] ?? 0;
+                    });
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Error searching invoices')),
+                    );
+                  } finally {
+                    setState(() {
+                      _isLoading = false;
+                    });
+                  }
+                }
+              },
+            ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              // TODO: Implement filter logic
-              print('Filter tapped');
-            },
-          ),
-        ],
+        ),
       ),
       body: Column(
         children: [
@@ -504,16 +533,18 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                                                 tooltip: 'Edit Invoice',
                                                 onPressed:
                                                     () => Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        NewInvoiceScreen(
-                                                      invoice: invoice,
-                                                    ),
-                                                  ),
-                                                ).then((value) {
-                                                  _refreshList();
-                                                }),
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder:
+                                                            (context) =>
+                                                                NewInvoiceScreen(
+                                                                  invoice:
+                                                                      invoice,
+                                                                ),
+                                                      ),
+                                                    ).then((value) {
+                                                      _refreshList();
+                                                    }),
                                               ),
                                               const SizedBox(height: 6),
                                               IconButton(
