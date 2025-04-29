@@ -253,81 +253,89 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
   }
 
   Future<void> _performSearch() async {
-  String searchQuery = _searchController.text.trim();
-  if (searchQuery.isNotEmpty) {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      final response = await _invoiceService.searchInvoices(searchQuery);
-      if (mounted) {
-        final List<dynamic> invoiceList = response['invoices'] as List<dynamic>;
-        setState(() {
-          _filteredInvoiceList = invoiceList.cast<Invoice>();
-          _totalPages = response['totalPages'] ?? 1;
-          _currentPage = response['currentPage'] ?? 0;
-        });
-        print('Found ${_filteredInvoiceList.length} invoices');
-      }
-    } catch (e, stackTrace) {
-      print('Search error: $e\n$stackTrace');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error searching invoices: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+    String searchQuery = _searchController.text.trim();
+    if (searchQuery.isNotEmpty) {
+      setState(() {
+        _isLoading = true;
+      });
+      try {
+        final response = await _invoiceService.searchInvoices(searchQuery);
+        if (mounted) {
+          final List<dynamic> invoiceList =
+              response['invoices'] as List<dynamic>;
+          setState(() {
+            _filteredInvoiceList = invoiceList.cast<Invoice>();
+            _totalPages = response['totalPages'] ?? 1;
+            _currentPage = response['currentPage'] ?? 0;
+          });
+          print('Found ${_filteredInvoiceList.length} invoices');
+        }
+      } catch (e, stackTrace) {
+        print('Search error: $e\n$stackTrace');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error searching invoices: $e')),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
-}
 
+  TextEditingController _searchController = TextEditingController();
 
-TextEditingController _searchController = TextEditingController();
-
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: const Text('Invoices'), // Title stays simple
-      actions: [
-Container(
-  width: 200, // fixed width for search box
-  margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-  child: TextField(
-    controller: _searchController,
-    style: const TextStyle(color: Color.fromARGB(255, 15, 15, 15)),
-    textInputAction: TextInputAction.search, // <-- Important for Enter button
-    onSubmitted: (value) async {
-      await _performSearch();
-    }, // <-- Important to handle Enter key
-    decoration: InputDecoration(
-      hintText: 'Search...',
-      hintStyle: const TextStyle(color: Color.fromARGB(179, 73, 73, 73)),
-      prefixIcon: IconButton(
-        icon: const Icon(Icons.search, color: Color.fromARGB(255, 26, 25, 25)),
-        onPressed: () async {
-          await _performSearch();
-        },
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Invoices'), // Title stays simple
+        actions: [
+          Container(
+            width: 200, // fixed width for search box
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Color.fromARGB(255, 15, 15, 15)),
+              textInputAction:
+                  TextInputAction.search, // <-- Important for Enter button
+              onSubmitted: (value) async {
+                await _performSearch();
+              }, // <-- Important to handle Enter key
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                hintStyle: const TextStyle(
+                  color: Color.fromARGB(179, 73, 73, 73),
+                ),
+                prefixIcon: IconButton(
+                  icon: const Icon(
+                    Icons.search,
+                    color: Color.fromARGB(255, 26, 25, 25),
+                  ),
+                  onPressed: () async {
+                    await _performSearch();
+                  },
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white70),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: const Color.fromARGB(255, 150, 150, 150),
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              ),
+            ),
+          ),
+        ],
       ),
-      enabledBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.white70),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: const Color.fromARGB(255, 150, 150, 150)),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-    ),
-  ),
-)
-      ],
-    ),
       body: Column(
         children: [
           Padding(

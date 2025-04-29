@@ -65,11 +65,9 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
   final DateFormat _dateFormat = DateFormat('dd-MMM-yyyy');
 
   double _shipping = 0.0;
-  // Removed duplicate declaration of _shipping
 
   final double _taxRate = 0.15;
   int _invoiceNumber = 1;
-  // Changed to nullable and removed default value
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     final userString = prefs.getString('user');
@@ -117,36 +115,21 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
         companyName = invoice.companyName ?? '';
         _discountAmount = invoice.discountCash ?? 0;
         _discountPercentage = invoice.discountPersentage ?? 0;
-        _paidAmount = invoice.paidAmount ?? 0;
-        _advancePaid = 0; // Set this if you have it in your invoice model
+        // Split the total paid amount between paidAmount and advancePaid
+        final totalPaid = invoice.paidAmount ?? 0;
+        _paidAmount = totalPaid;
+        _advancePaid = invoice.advancePaid ?? 0;
 
         // Convert invoice items to the format expected by the UI
-        items =
-            invoice.items
-                ?.map(
-                  (item) => {
-                    'name': item.itemName ?? '',
-                    'description': item.description ?? '',
-                    'unit': item.quantity?.toString() ?? '0',
-                    'price': item.unitPrice?.toString() ?? '0',
-                    'amount': item.totalPrice?.toString() ?? '0',
-                    'tax':
-                        item.taxAmount?.toString() ??
-                        '0', // Include the tax rate
-                  },
-                )
-                .toList() ??
-            [];
-
-        // Calculate amounts including tax
-        for (var item in items) {
-          final quantity = double.tryParse(item['unit'] ?? '0') ?? 0;
-          final unitPrice = double.tryParse(item['price'] ?? '0') ?? 0;
-          final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
-          final itemTotal = quantity * unitPrice;
-          final taxAmount = itemTotal * tax / 100;
-          item['amount'] = (itemTotal + taxAmount).toStringAsFixed(2);
-        }
+        items = invoice.items?.map((item) => {
+          'name': item.itemName ?? '',
+          'description': item.description ?? '',
+          'unit': item.quantity?.toString() ?? '0',
+          'price': item.unitPrice?.toString() ?? '0',
+          'tax': item.tax?.toString() ?? '0',
+          // Calculate amount with tax for consistent display
+          'amount': ((item.quantity ?? 0) * (item.unitPrice ?? 0) * (1 + (item.tax ?? 0) / 100)).toString(),
+        }).toList() ?? [];
       });
     }
     _loadUserData();
@@ -418,13 +401,16 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
               onPressed: () {
                 final unit = double.tryParse(unitController.text) ?? 1;
                 final price = double.tryParse(item['price'] ?? '0') ?? 0;
-                final amount = unit * price;
+                final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
+                final itemTotal = unit * price;
+                final taxAmount = itemTotal * tax / 100;
+                final totalWithTax = itemTotal + taxAmount;
 
                 setState(() {
                   items[index] = {
                     ...item,
                     'unit': unit.toString(),
-                    'amount': amount.toStringAsFixed(2),
+                    'amount': itemTotal.toString(), // Base amount without tax
                   };
                 });
                 Navigator.pop(context);
@@ -532,22 +518,22 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                       selectedProduct == null
                           ? null
                           : () {
-                            final unit =
-                                double.tryParse(unitController.text) ?? 1;
+                            final unit = double.tryParse(unitController.text) ?? 1;
                             final price = selectedProduct?.price ?? 0;
-                            final amount = unit * price;
+                            final tax = selectedProduct?.taxRate ?? 0;
+                            final itemTotal = unit * price;
+                            final taxAmount = itemTotal * tax / 100;
+                            final totalWithTax = itemTotal + taxAmount;
 
                             // Update the parent widget's state
                             setState(() {
                               items.add({
                                 'name': selectedProduct?.name ?? '',
-                                'description':
-                                    selectedProduct?.description ?? '',
+                                'description': selectedProduct?.description ?? '',
                                 'unit': unit.toString(),
                                 'price': price.toString(),
-                                'amount': amount.toStringAsFixed(2),
-                                'tax':
-                                    selectedProduct?.taxRate?.toString() ?? '0',
+                                'amount': itemTotal.toString(), // Base amount without tax
+                                'tax': tax.toString(),
                               });
                             });
                             Navigator.pop(context);
@@ -598,11 +584,11 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                   itemBuilder: (context, index) {
                     final item = items[index];
                     final quantity = double.tryParse(item['unit'] ?? '0') ?? 0;
-                    final unitPrice =
-                        double.tryParse(item['price'] ?? '0') ?? 0;
+                    final unitPrice = double.tryParse(item['price'] ?? '0') ?? 0;
                     final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
-                    final itemTotal = quantity * unitPrice;
+                    final itemTotal = double.tryParse(item['amount'] ?? '0') ?? 0;
                     final taxAmount = itemTotal * tax / 100;
+                    final totalWithTax = itemTotal + taxAmount;
 
                     return Dismissible(
                       key: Key('item_$index'),
@@ -661,7 +647,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                                         ),
                                       ),
                                     Text(
-                                      'Total: ৳${(itemTotal + taxAmount).toStringAsFixed(2)}',
+                                      'Total: ৳${totalWithTax.toStringAsFixed(2)}',
                                       style: TextStyle(fontSize: 12),
                                     ),
                                   ],
@@ -703,8 +689,8 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
     double paidAmount,
     double itemLevelTax,
   ) {
-    // Since tax is now included in subtotal, don't add itemLevelTax again
-    return subtotal + shipping - discountAmount;
+    // Calculate total: subtotal + tax + shipping - discount
+    return subtotal + itemLevelTax + shipping - discountAmount;
   }
 
   double _calculateSubtotal() {
@@ -713,10 +699,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
       final unitPrice = double.tryParse(item['price'] ?? '0') ?? 0;
       final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
       final itemTotal = quantity * unitPrice;
-      final itemTax = itemTotal * tax / 100;
-      return sum +
-          itemTotal +
-          itemTax; // Include both price and tax in subtotal
+      return sum + itemTotal; // Subtotal is before tax
     });
   }
 
@@ -789,12 +772,13 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
           final tax = double.tryParse(item['tax'] ?? '0') ?? 0;
           final itemTotal = quantity * unitPrice;
           final taxAmount = itemTotal * tax / 100;
+          final totalWithTax = itemTotal + taxAmount;
 
           return {
             'itemName': item['name'] ?? '',
             'quantity': quantity,
             'unitPrice': unitPrice,
-            'totalPrice': itemTotal,
+            'totalPrice': totalWithTax, // Include tax in total price
             'tax': tax,
             'taxAmount': taxAmount,
           };
@@ -813,13 +797,16 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
       issueDate: _createdDate,
       subtotal: subtotal,
       totalAmount: totalAmount,
-      paidAmount: totalPaid,
+      paidAmount: _paidAmount,
+      advancePaid: _advancePaid,
       dueAmount: dueAmount,
       discountPersentage: discountPercentage,
       client: client,
       discountCash: _discountAmount,
       status: dueAmount <= 0 ? 'PAID' : status.toUpperCase(),
       dueDate: _dueDate,
+      // Preserve invoice number when updating
+      invoiceNumber: widget.invoice?.invoiceNumber,
       // createdBy will be set by InvoiceService
       companyName: companyName,
       items:
@@ -839,21 +826,35 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
 
     try {
       final invoiceService = InvoiceService();
-      final newInvoice = await invoiceService.createInvoice(invoice);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Invoice created successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      Invoice? savedInvoice;
+      
+      if (widget.invoice != null) {
+        // Update existing invoice
+        invoice.id = widget.invoice!.id; // Set the ID from existing invoice
+        savedInvoice = await invoiceService.updateInvoice(invoice);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invoice updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        // Create new invoice
+        savedInvoice = await invoiceService.createInvoice(invoice);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invoice created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
 
       // Navigate back to previous screen
-      Navigator.pop(context, newInvoice);
+      Navigator.pop(context, savedInvoice);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to create invoice: $e'),
+          content: Text(widget.invoice != null ? 'Failed to update invoice: $e' : 'Failed to create invoice: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -1000,8 +1001,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
   }
 
   Widget _buildTotals() {
-    final subtotal =
-        _calculateSubtotal(); // This now includes item prices + tax
+    final subtotal = _calculateSubtotal(); // Subtotal before tax
     final discountPercentage = _discountPercentage;
     final discountAmount =
         _discountPercentage > 0
@@ -1017,7 +1017,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
       shipping,
       0,
       0,
-      itemTax, // This won't be added again since it's in subtotal
+      itemTax,
     );
 
     final totalPaid = advancePaid + paidAmount;
@@ -1027,7 +1027,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
       child: Column(
         children: [
           _buildTotalRow(
-            'Subtotal (including tax)',
+            'Subtotal',
             '৳${subtotal.toStringAsFixed(2)}',
           ),
           _buildTotalRow(
@@ -1065,7 +1065,7 @@ class _NewInvoiceScreenState extends State<NewInvoiceScreen> {
                 ),
           ),
           _buildTotalRow(
-            'Item Level Tax (included in subtotal)',
+            'Tax',
             '৳${itemTax.toStringAsFixed(2)}',
           ),
           _buildTotalRow(

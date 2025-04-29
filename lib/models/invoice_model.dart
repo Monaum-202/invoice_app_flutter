@@ -8,6 +8,7 @@ class Invoice {
   double? subtotal;
   double? totalAmount;
   double? paidAmount;
+  double? advancePaid;
   double? dueAmount;
   double? discountPersentage;
   double? discountCash;
@@ -25,6 +26,7 @@ class Invoice {
     this.subtotal,
     this.totalAmount,
     this.paidAmount,
+    this.advancePaid,
     this.dueAmount,
     this.discountPersentage,
     this.discountCash,
@@ -44,6 +46,7 @@ class Invoice {
       subtotal: json['subtotal']?.toDouble(),
       totalAmount: json['totalAmount']?.toDouble(),
       paidAmount: json['paidAmount']?.toDouble(),
+      advancePaid: json['advancePaid']?.toDouble(),
       dueAmount: json['dueAmount']?.toDouble(),
       discountPersentage: json['discountPersentage']?.toDouble(),
       discountCash: json['discountCash']?.toDouble(),
@@ -67,6 +70,7 @@ class Invoice {
       "subtotal": subtotal,
       "totalAmount": totalAmount,
       "paidAmount": paidAmount,
+      "advancePaid": advancePaid,
       "dueAmount": dueAmount,
       "discountPersentage": discountPersentage,
       "discountCash": discountCash,
@@ -83,6 +87,6 @@ class Invoice {
 
   @override
   String toString() {
-    return 'Invoice{id: $id, invoiceNumber: $invoiceNumber, subtotal: $subtotal, totalAmount: $totalAmount, paidAmount: $paidAmount, dueAmount: $dueAmount, discountPersentage: $discountPersentage, discountCash: $discountCash, status: $status, issueDate: $issueDate, dueDate: $dueDate, createdBy: $createdBy, client: ${client?.toString()}, items: ${items?.toString()}}}';
+    return 'Invoice{id: $id, invoiceNumber: $invoiceNumber, subtotal: $subtotal, totalAmount: $totalAmount, paidAmount: $paidAmount, advancePaid: $advancePaid, dueAmount: $dueAmount, discountPersentage: $discountPersentage, discountCash: $discountCash, status: $status, issueDate: $issueDate, dueDate: $dueDate, createdBy: $createdBy, client: ${client?.toString()}, items: ${items?.toString()}}';
   }
 }

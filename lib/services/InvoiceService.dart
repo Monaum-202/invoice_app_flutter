@@ -120,21 +120,64 @@ class InvoiceService {
   // POST: Create a new product
 
   // PUT: Update product
-  Future<Invoice> updateProduct(Invoice invoice) async {
+  Future<Invoice> updateInvoice(Invoice invoice) async {
     try {
+      // Get token from shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
+
+      // Get username from token for createdBy field
+      final authService = AuthService();
+      final username = await authService.getUsernameFromToken(token);
+      
+      if (username == null || username.isEmpty) {
+        throw Exception('Could not get username from token');
+      }
+      
+      // Prepare client data if present
+      Map<String, dynamic>? clientData;
+      if (invoice.client != null) {
+        clientData = {
+          ...invoice.client!.toJson(),
+          'createdBy': username,
+        };
+      }
+
+      // Create the request body
+      final Map<String, dynamic> requestBody = {
+        ...invoice.toJson(),
+        'createdBy': username,
+        if (clientData != null) 'client': clientData,
+      };
+
       final response = await http.put(
         Uri.parse('$baseUrl/${invoice.id}'),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(invoice.toJson()),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(requestBody),
       );
 
       if (response.statusCode == 200) {
-        return Invoice.fromJson(jsonDecode(response.body));
+        final responseData = jsonDecode(response.body);
+        
+        // Ensure client data has createdBy
+        if (responseData['client'] != null && responseData['client']['createdBy'] == null) {
+          responseData['client']['createdBy'] = username;
+        }
+        
+        return Invoice.fromJson(responseData);
       } else {
-        throw Exception("Failed to update product");
+        throw Exception("Failed to update invoice: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      throw Exception("Error: $e");
+      throw Exception("Error updating invoice: $e");
     }
   }
 
